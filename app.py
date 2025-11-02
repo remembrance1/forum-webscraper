@@ -10,6 +10,7 @@ import random
 import requests
 import math
 from bs4 import BeautifulSoup
+import re
 
 APP_TITLE = "Flask Forum Link Scraper"
 BACKENDS = ["auto", "requests", "cloudscraper", "playwright"]
@@ -184,7 +185,6 @@ def extract_links(html_text: str, base_url: str):
         links.append((text, abs_url))
     return links
 
-
 def filter_links(links, keyword: str, match_in_text: bool = True, match_in_url: bool = True,
                  same_domain_only: bool = False, base_url: str = ""):
     kw = (keyword or "").lower()
@@ -203,6 +203,21 @@ def filter_links(links, keyword: str, match_in_text: bool = True, match_in_url: 
                 out.append((text, url))
     return out
 
+def subfilter_links(pairs, sub_kw, match_text=True, match_url=True):
+    """
+    Apply a second-level filter over already-matched (text, url) pairs.
+    Case-insensitive; respects match_text/match_url toggles.
+    """
+    if not sub_kw:
+        return pairs
+    pat = re.compile(re.escape(sub_kw), re.IGNORECASE)
+    out = []
+    for text, url in pairs:
+        t_ok = bool(match_text and text and pat.search(text))
+        u_ok = bool(match_url and url and pat.search(url))
+        if t_ok or u_ok:
+            out.append((text, url))
+    return out
 
 def render_results_html(links, source_url: str, keyword: str) -> str:
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -281,6 +296,8 @@ def index():
     if request.method == "POST":
         url = (request.form.get("url") or "").strip()
         keyword = (request.form.get("keyword") or "").strip()
+        sub_keyword = (request.form.get("sub_keyword") or "").strip()  # NEW: optional refine filter
+
         match_text = request.form.get("match_text") == "on"
         match_url = request.form.get("match_url") == "on"
         same_domain = request.form.get("same_domain") == "on"
@@ -334,6 +351,12 @@ def index():
                 base_url=url,
             )
 
+            # second-level filter (optional)
+            if sub_keyword:
+                matches = subfilter_links(
+                    matches, sub_keyword, match_text=match_text, match_url=match_url
+                )
+
         except Exception as e:
             flash(f"Failed to fetch or parse page: {e}", "error")
             return redirect(url_for("index"))
@@ -341,6 +364,7 @@ def index():
         session["last_results"] = {
             "source_url": url,
             "keyword": keyword,
+            "sub_keyword": sub_keyword,
             "matches": matches,
         }
         return redirect(url_for("results", page=1))
@@ -389,6 +413,7 @@ def results():
         title=APP_TITLE,
         source_url=data.get("source_url"),
         keyword=data.get("keyword"),
+        sub_keyword=data.get("sub_keyword"),
         matches=page_items,            # ← only the current slice
         match_text=request.args.get("match_text") == "on" if "match_text" in request.args else None,
         match_url=request.args.get("match_url") == "on" if "match_url" in request.args else None,

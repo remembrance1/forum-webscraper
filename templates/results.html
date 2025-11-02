@@ -2,7 +2,14 @@
 {% block content %}
 <section>
   <p class="muted">Source: <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer" class="url">{{ source_url }}</a></p>
-  <p><strong>Keyword:</strong> <span class="mono">{{ keyword }}</span></p>
+  <p>
+    <strong>Keyword:</strong>
+    <span class="mono">{{ keyword }}</span>
+  </p>
+  <p>
+    <strong>Sub-keyword:</strong>
+    <span class="mono">{{ sub_keyword if sub_keyword else 'NA' }}</span>
+  </p>
 
   <details>
     <summary>Scan options</summary>
