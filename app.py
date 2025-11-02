@@ -8,6 +8,7 @@ import io
 import os
 import random
 import requests
+import math
 from bs4 import BeautifulSoup
 
 APP_TITLE = "Flask Forum Link Scraper"
@@ -342,19 +343,7 @@ def index():
             "keyword": keyword,
             "matches": matches,
         }
-        return render_template(
-            "results.html",
-            title=APP_TITLE,
-            source_url=url,
-            keyword=keyword,
-            matches=matches,
-            match_text=match_text,
-            match_url=match_url,
-            same_domain=same_domain,
-            referer=referer,
-            cookies_set=bool(cookies_raw),
-            backend=backend,
-        )
+        return redirect(url_for("results", page=1))
 
     return render_template("index.html", title=APP_TITLE, backends=BACKENDS)
 
@@ -370,6 +359,47 @@ def export_html():
     filename = f"filtered_links_{int(time.time())}.html"
     return send_file(buf, mimetype="text/html", as_attachment=True, download_name=filename)
 
+@app.get("/results")
+def results():
+    data = session.get("last_results")
+    if not data:
+        flash("No results to display. Please run a new scan.", "error")
+        return redirect(url_for("index"))
+
+    matches = data.get("matches", [])
+    per_page = 30
+    total = len(matches)
+
+    # current page from querystring ?page=#
+    try:
+        page = int(request.args.get("page", 1))
+    except ValueError:
+        page = 1
+
+    total_pages = max(1, math.ceil(total / per_page))
+    page = max(1, min(page, total_pages))  # clamp
+
+    start = (page - 1) * per_page
+    end = start + per_page
+    page_items = matches[start:end]
+
+    # re-use your saved context
+    return render_template(
+        "results.html",
+        title=APP_TITLE,
+        source_url=data.get("source_url"),
+        keyword=data.get("keyword"),
+        matches=page_items,            # ← only the current slice
+        match_text=request.args.get("match_text") == "on" if "match_text" in request.args else None,
+        match_url=request.args.get("match_url") == "on" if "match_url" in request.args else None,
+        same_domain=request.args.get("same_domain") == "on" if "same_domain" in request.args else None,
+        # pagination context
+        page=page,
+        total_pages=total_pages,
+        per_page=per_page,
+        total=total,
+        start_index=start,            # for global numbering
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)

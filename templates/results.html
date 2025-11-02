@@ -1,15 +1,17 @@
-
 {% extends 'base.html' %}
 {% block content %}
 <section>
   <p class="muted">Source: <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer" class="url">{{ source_url }}</a></p>
   <p><strong>Keyword:</strong> <span class="mono">{{ keyword }}</span></p>
+
   <details>
     <summary>Scan options</summary>
     <ul>
-      <li>Match in link text: <strong>{{ 'Yes' if match_text else 'No' }}</strong></li>
-      <li>Match in URL: <strong>{{ 'Yes' if match_url else 'No' }}</strong></li>
-      <li>Same domain only: <strong>{{ 'Yes' if same_domain else 'No' }}</strong></li>
+      {% if match_text is not none %}<li>Match in link text: <strong>{{ 'Yes' if match_text else 'No' }}</strong></li>{% endif %}
+      {% if match_url  is not none %}<li>Match in URL:       <strong>{{ 'Yes' if match_url  else 'No' }}</strong></li>{% endif %}
+      {% if same_domain is not none %}<li>Same domain only:   <strong>{{ 'Yes' if same_domain else 'No' }}</strong></li>{% endif %}
+      <li>Total matches: <strong>{{ total }}</strong></li>
+      <li>Page: <strong>{{ page }}</strong> / <strong>{{ total_pages }}</strong></li>
     </ul>
   </details>
 
@@ -19,14 +21,53 @@
   </div>
 
   {% if matches %}
-    <ul>
+    <ul style="list-style: none; padding-left: 0;">
       {% for text, u in matches %}
-        <li>
+        <li style="margin-bottom: 10px;">
+          <strong>{{ start_index + loop.index }}.</strong>
           <a href="{{ u }}" target="_blank" rel="noopener noreferrer">{{ text or u }}</a>
           <div class="muted url">{{ u }}</div>
         </li>
       {% endfor %}
     </ul>
+
+    <!-- Pager -->
+    <nav aria-label="Results pages" style="margin-top: 14px; display: flex; gap: 6px; flex-wrap: wrap;">
+      {% set first_disabled = (page == 1) %}
+      {% set last_disabled  = (page == total_pages) %}
+
+      <a role="button" class="secondary" href="{{ url_for('results', page=1) }}"
+         {% if first_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
+         « First
+      </a>
+
+      <a role="button" class="secondary" href="{{ url_for('results', page=page-1) }}"
+         {% if first_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
+         ‹ Prev
+      </a>
+
+      {# Compute the window [start_p, end_p] around the current page #}
+      {% set start_p = 1 if (page - 2) < 1 else (page - 2) %}
+      {% set end_p = total_pages if (page + 2) > total_pages else (page + 2) %}
+
+      {% for p in range(start_p, end_p + 1) %}
+        {% if p == page %}
+          <span role="button" class="secondary" aria-current="page" style="font-weight:700;">{{ p }}</span>
+        {% else %}
+          <a role="button" class="secondary" href="{{ url_for('results', page=p) }}">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+
+      <a role="button" class="secondary" href="{{ url_for('results', page=page+1) }}"
+         {% if last_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
+         Next ›
+      </a>
+
+      <a role="button" class="secondary" href="{{ url_for('results', page=total_pages) }}"
+         {% if last_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
+         Last »
+      </a>
+    </nav>
   {% else %}
     <article class="secondary">No matches found. Try a broader keyword or different page.</article>
   {% endif %}
