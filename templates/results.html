@@ -1,0 +1,34 @@
+
+{% extends 'base.html' %}
+{% block content %}
+<section>
+  <p class="muted">Source: <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer" class="url">{{ source_url }}</a></p>
+  <p><strong>Keyword:</strong> <span class="mono">{{ keyword }}</span></p>
+  <details>
+    <summary>Scan options</summary>
+    <ul>
+      <li>Match in link text: <strong>{{ 'Yes' if match_text else 'No' }}</strong></li>
+      <li>Match in URL: <strong>{{ 'Yes' if match_url else 'No' }}</strong></li>
+      <li>Same domain only: <strong>{{ 'Yes' if same_domain else 'No' }}</strong></li>
+    </ul>
+  </details>
+
+  <div style="margin: 12px 0; display: flex; gap: 8px;">
+    <a href="/" role="button" class="secondary">New Scan</a>
+    <a href="{{ url_for('export_html') }}" role="button">Export HTML</a>
+  </div>
+
+  {% if matches %}
+    <ul>
+      {% for text, u in matches %}
+        <li>
+          <a href="{{ u }}" target="_blank" rel="noopener noreferrer">{{ text or u }}</a>
+          <div class="muted url">{{ u }}</div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <article class="secondary">No matches found. Try a broader keyword or different page.</article>
+  {% endif %}
+</section>
+{% endblock %}

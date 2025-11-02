@@ -1,0 +1,29 @@
+
+{% extends 'base.html' %}
+{% block content %}
+<form method="post">
+  <label for="url">Forum URL</label>
+  <input type="url" id="url" name="url" placeholder="https://example.com/forum/thread" required>
+
+  <label for="keyword">Keyword</label>
+  <input type="text" id="keyword" name="keyword" placeholder="raspberry" required>
+
+  <fieldset>
+    <legend>Options</legend>
+    <label>
+      <input type="checkbox" name="match_text" checked>
+      Match in link text
+    </label>
+    <label>
+      <input type="checkbox" name="match_url" checked>
+      Match in URL
+    </label>
+    <label>
+      <input type="checkbox" name="same_domain">
+      Same domain only
+    </label>
+  </fieldset>
+
+  <button type="submit">Scan</button>
+</form>
+{% endblock %}

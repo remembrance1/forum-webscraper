@@ -1,0 +1,35 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    .muted { color: #667; font-size: .9rem; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .url { word-break: break-all; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <hgroup>
+      <h1>{{ title }}</h1>
+      <p class="muted">Paste a forum URL, enter a keyword, get clickable matches that open in new tabs.</p>
+    </hgroup>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <article class="{{ 'secondary' if category == 'error' else 'primary' }}">
+            {{ message }}
+          </article>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
