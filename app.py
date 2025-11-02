@@ -219,6 +219,60 @@ def render_results_html(links, source_url: str, keyword: str) -> str:
 <p>Source: <a href="{html.escape(source_url)}">{html.escape(source_url)}</a><br>Generated: {ts}</p>
 <ul>{''.join(items)}</ul>{empty_msg}</body></html>"""
 
+# ---------- Pagination helpers ----------
+def find_next_page_url(soup: BeautifulSoup, base_url: str) -> str | None:
+    """
+    Try common Discuz!/forum 'next page' patterns.
+    - <a class="nxt"> for Discuz
+    - Link text 'Next', '下一页', '›'
+    - rel="next"
+    Returns absolute URL or None if not found.
+    """
+    # 1) rel="next"
+    a = soup.find("a", rel=lambda v: v and "next" in v.lower())
+    if a and a.get("href"):
+        return urljoin(base_url, a["href"].strip())
+
+    # 2) Discuz class="nxt"
+    a = soup.find("a", class_=lambda c: c and "nxt" in c)
+    if a and a.get("href"):
+        return urljoin(base_url, a["href"].strip())
+
+    # 3) Common text variants
+    for txt in ("Next", "next", "下一页", "›", ">"):
+        a = soup.find("a", string=lambda s: s and txt in s)
+        if a and a.get("href"):
+            return urljoin(base_url, a["href"].strip())
+
+    return None
+
+
+def iterate_forum_pages(start_url: str, max_pages: int, referer: str | None,
+                        cookies_raw: str | None, backend: str = "auto",
+                        pause_seconds: float = 0.5):
+    """
+    Yield (page_url, html_text, soup) for up to max_pages, following the forum's Next link.
+    De-duplicates by visited URL.
+    """
+    visited = set()
+    current_url = start_url
+
+    for _ in range(max_pages):
+        if current_url in visited:
+            break
+        visited.add(current_url)
+
+        html_text = smart_fetch(current_url, referer, cookies_raw, backend=backend)
+        soup = BeautifulSoup(html_text, "html.parser")
+        yield current_url, html_text, soup
+
+        next_url = find_next_page_url(soup, current_url)
+        if not next_url:
+            break
+        current_url = next_url
+        if pause_seconds > 0:
+            time.sleep(pause_seconds)
+
 
 # ---------- Flask routes ----------
 @app.route("/", methods=["GET", "POST"])
@@ -235,6 +289,19 @@ def index():
         if backend not in BACKENDS:
             backend = "auto"
 
+        # NEW: optional pagination inputs (safe defaults if fields not in template yet)
+        try:
+            max_pages = int(request.form.get("max_pages") or 1)
+        except ValueError:
+            max_pages = 1
+        max_pages = max(1, max_pages)
+
+        try:
+            pause_ms = int(request.form.get("pause_ms") or 400)
+        except ValueError:
+            pause_ms = 400
+        pause_seconds = max(0, pause_ms) / 1000.0
+
         parsed = urlparse(url)
         if not parsed.scheme or not parsed.netloc:
             flash("Please provide a full URL including https://", "error")
@@ -244,9 +311,28 @@ def index():
             return redirect(url_for("index"))
 
         try:
-            html_text = smart_fetch(url, referer, cookies_raw, backend=backend)
-            links = extract_links(html_text, url)
-            matches = filter_links(links, keyword, match_text, match_url, same_domain, base_url=url)
+            # Crawl up to max_pages by following the forum's Next link(s)
+            all_links = []
+            for page_url, html_text, soup in iterate_forum_pages(
+                start_url=url,
+                max_pages=max_pages,
+                referer=referer,
+                cookies_raw=cookies_raw,
+                backend=backend,
+                pause_seconds=pause_seconds,
+            ):
+                all_links.extend(extract_links(html_text, page_url))
+
+            # Filter once over the union of links across all visited pages
+            matches = filter_links(
+                all_links,
+                keyword,
+                match_text,
+                match_url,
+                same_domain,
+                base_url=url,
+            )
+
         except Exception as e:
             flash(f"Failed to fetch or parse page: {e}", "error")
             return redirect(url_for("index"))
@@ -256,20 +342,21 @@ def index():
             "keyword": keyword,
             "matches": matches,
         }
-        return render_template("results.html",
-                               title=APP_TITLE,
-                               source_url=url,
-                               keyword=keyword,
-                               matches=matches,
-                               match_text=match_text,
-                               match_url=match_url,
-                               same_domain=same_domain,
-                               referer=referer,
-                               cookies_set=bool(cookies_raw),
-                               backend=backend)
+        return render_template(
+            "results.html",
+            title=APP_TITLE,
+            source_url=url,
+            keyword=keyword,
+            matches=matches,
+            match_text=match_text,
+            match_url=match_url,
+            same_domain=same_domain,
+            referer=referer,
+            cookies_set=bool(cookies_raw),
+            backend=backend,
+        )
 
     return render_template("index.html", title=APP_TITLE, backends=BACKENDS)
-
 
 @app.route("/export/html")
 def export_html():

@@ -8,6 +8,12 @@
   <label for="keyword">Keyword</label>
   <input type="text" id="keyword" name="keyword" placeholder="raspberry" required>
 
+  <label for="max_pages">Max pages to crawl</label>
+  <input type="number" id="max_pages" name="max_pages" value="3" min="1" step="1">
+
+  <label for="pause_ms">Delay between pages (ms)</label>
+  <input type="number" id="pause_ms" name="pause_ms" value="400" min="0" step="50">
+
   <fieldset>
     <legend>Options</legend>
     <label>
