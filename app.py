@@ -11,6 +11,9 @@ import requests
 import math
 from bs4 import BeautifulSoup
 import re
+import uuid
+
+RUNS = {} 
 
 APP_TITLE = "Flask Forum Link Scraper"
 BACKENDS = ["auto", "requests", "cloudscraper", "playwright"]
@@ -293,83 +296,94 @@ def iterate_forum_pages(start_url: str, max_pages: int, referer: str | None,
 # ---------- Flask routes ----------
 @app.route("/", methods=["GET", "POST"])
 def index():
-    if request.method == "POST":
-        url = (request.form.get("url") or "").strip()
-        keyword = (request.form.get("keyword") or "").strip()
-        sub_keyword = (request.form.get("sub_keyword") or "").strip()  # NEW: optional refine filter
+    if request.method == "GET":
+        # Clear any previous run when loading the form
+        session.pop("run_id", None)
+        return render_template("index.html", title=APP_TITLE, backends=BACKENDS)
 
-        match_text = request.form.get("match_text") == "on"
-        match_url = request.form.get("match_url") == "on"
-        same_domain = request.form.get("same_domain") == "on"
-        referer = (request.form.get("referer") or "").strip() or None
-        cookies_raw = (request.form.get("cookies") or "").strip() or None
-        backend = (request.form.get("backend") or os.environ.get("FETCH_BACKEND", "auto")).strip().lower()
-        if backend not in BACKENDS:
-            backend = "auto"
+    # ---------- POST branch ----------
+    session.pop("run_id", None)  # clear previous run again just in case
 
-        # NEW: optional pagination inputs (safe defaults if fields not in template yet)
-        try:
-            max_pages = int(request.form.get("max_pages") or 1)
-        except ValueError:
-            max_pages = 1
-        max_pages = max(1, max_pages)
+    url = (request.form.get("url") or "").strip()
+    keyword = (request.form.get("keyword") or "").strip()
+    sub_keyword = (request.form.get("sub_keyword") or "").strip()  # optional refine filter
 
-        try:
-            pause_ms = int(request.form.get("pause_ms") or 400)
-        except ValueError:
-            pause_ms = 400
-        pause_seconds = max(0, pause_ms) / 1000.0
+    match_text = request.form.get("match_text") == "on"
+    match_url = request.form.get("match_url") == "on"
+    same_domain = request.form.get("same_domain") == "on"
+    referer = (request.form.get("referer") or "").strip() or None
+    cookies_raw = (request.form.get("cookies") or "").strip() or None
+    backend = (request.form.get("backend") or os.environ.get("FETCH_BACKEND", "auto")).strip().lower()
+    if backend not in BACKENDS:
+        backend = "auto"
 
-        parsed = urlparse(url)
-        if not parsed.scheme or not parsed.netloc:
-            flash("Please provide a full URL including https://", "error")
-            return redirect(url_for("index"))
-        if not keyword:
-            flash("Keyword cannot be empty.", "error")
-            return redirect(url_for("index"))
+    # Optional pagination inputs
+    try:
+        max_pages = int(request.form.get("max_pages") or 1)
+    except ValueError:
+        max_pages = 1
+    max_pages = max(1, max_pages)
 
-        try:
-            # Crawl up to max_pages by following the forum's Next link(s)
-            all_links = []
-            for page_url, html_text, soup in iterate_forum_pages(
-                start_url=url,
-                max_pages=max_pages,
-                referer=referer,
-                cookies_raw=cookies_raw,
-                backend=backend,
-                pause_seconds=pause_seconds,
-            ):
-                all_links.extend(extract_links(html_text, page_url))
+    try:
+        pause_ms = int(request.form.get("pause_ms") or 400)
+    except ValueError:
+        pause_ms = 400
+    pause_seconds = max(0, pause_ms) / 1000.0
 
-            # Filter once over the union of links across all visited pages
-            matches = filter_links(
-                all_links,
-                keyword,
-                match_text,
-                match_url,
-                same_domain,
-                base_url=url,
+    parsed = urlparse(url)
+    if not parsed.scheme or not parsed.netloc:
+        flash("Please provide a full URL including https://", "error")
+        return redirect(url_for("index"))
+    if not keyword:
+        flash("Keyword cannot be empty.", "error")
+        return redirect(url_for("index"))
+
+    try:
+        # Crawl up to max_pages by following the forum's Next link(s)
+        all_links = []
+        for page_url, html_text, soup in iterate_forum_pages(
+            start_url=url,
+            max_pages=max_pages,
+            referer=referer,
+            cookies_raw=cookies_raw,
+            backend=backend,
+            pause_seconds=pause_seconds,
+        ):
+            all_links.extend(extract_links(html_text, page_url))
+
+        # Filter once over the union of links across all visited pages
+        matches = filter_links(
+            all_links,
+            keyword,
+            match_text,
+            match_url,
+            same_domain,
+            base_url=url,
+        )
+
+        # Second-level filter (optional)
+        if sub_keyword:
+            matches = subfilter_links(
+                matches, sub_keyword, match_text=match_text, match_url=match_url
             )
 
-            # second-level filter (optional)
-            if sub_keyword:
-                matches = subfilter_links(
-                    matches, sub_keyword, match_text=match_text, match_url=match_url
-                )
+    except Exception as e:
+        flash(f"Failed to fetch or parse page: {e}", "error")
+        return redirect(url_for("index"))
 
-        except Exception as e:
-            flash(f"Failed to fetch or parse page: {e}", "error")
-            return redirect(url_for("index"))
-
-        session["last_results"] = {
+    # ---------- Instead of storing in session, store in RUNS ----------
+    run_id = str(uuid.uuid4())
+    RUNS[run_id] = {
+        "results": matches,
+        "meta": {
             "source_url": url,
             "keyword": keyword,
             "sub_keyword": sub_keyword,
-            "matches": matches,
-        }
-        return redirect(url_for("results", page=1))
+        },
+    }
+    session["run_id"] = run_id  # small cookie-safe token
 
-    return render_template("index.html", title=APP_TITLE, backends=BACKENDS)
+    return redirect(url_for("results", page=1))
 
 @app.route("/export/html")
 def export_html():
@@ -385,12 +399,14 @@ def export_html():
 
 @app.get("/results")
 def results():
-    data = session.get("last_results")
+    run_id = session.get("run_id")
+    data = RUNS.get(run_id) if run_id else None
     if not data:
         flash("No results to display. Please run a new scan.", "error")
         return redirect(url_for("index"))
 
-    matches = data.get("matches", [])
+    matches = data.get("results", [])
+    meta = data.get("meta", {})
     per_page = 30
     total = len(matches)
 
@@ -407,14 +423,13 @@ def results():
     end = start + per_page
     page_items = matches[start:end]
 
-    # re-use your saved context
     return render_template(
         "results.html",
         title=APP_TITLE,
-        source_url=data.get("source_url"),
-        keyword=data.get("keyword"),
-        sub_keyword=data.get("sub_keyword"),
-        matches=page_items,            # ← only the current slice
+        source_url=meta.get("source_url"),
+        keyword=meta.get("keyword"),
+        sub_keyword=meta.get("sub_keyword"),
+        matches=page_items,  # only the current slice
         match_text=request.args.get("match_text") == "on" if "match_text" in request.args else None,
         match_url=request.args.get("match_url") == "on" if "match_url" in request.args else None,
         same_domain=request.args.get("same_domain") == "on" if "same_domain" in request.args else None,
@@ -423,7 +438,7 @@ def results():
         total_pages=total_pages,
         per_page=per_page,
         total=total,
-        start_index=start,            # for global numbering
+        start_index=start,  # for global numbering
     )
 
 if __name__ == "__main__":
