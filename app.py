@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, render_template, request, redirect, url_for, send_file, flash, session
+from flask import Flask, render_template, request, redirect, url_for, send_file, flash, session, jsonify
 from urllib.parse import urljoin, urlparse
 from pathlib import Path
 import time
@@ -12,6 +12,7 @@ import math
 from bs4 import BeautifulSoup
 import re
 import uuid
+import threading
 
 RUNS = {} 
 
@@ -292,6 +293,47 @@ def iterate_forum_pages(start_url: str, max_pages: int, referer: str | None,
         if pause_seconds > 0:
             time.sleep(pause_seconds)
 
+def run_scan_task(run_id, *, url, keyword, sub_keyword, match_text, match_url,
+                  same_domain, referer, cookies_raw, backend, pause_seconds,
+                  max_pages):
+    try:
+        # Initialise progress info
+        RUNS[run_id]["progress"].update({"status": "running", "current": 0, "total": max_pages})
+        all_links = []
+
+        for i, (page_url, html_text, soup) in enumerate(
+            iterate_forum_pages(
+                start_url=url,
+                max_pages=max_pages,
+                referer=referer,
+                cookies_raw=cookies_raw,
+                backend=backend,
+                pause_seconds=pause_seconds,
+            ),
+            start=1
+        ):
+            all_links.extend(extract_links(html_text, page_url))
+            # Update progress after each page
+            RUNS[run_id]["progress"].update({"current": i})
+
+        matches = filter_links(
+            all_links, keyword, match_text, match_url, same_domain, base_url=url
+        )
+        if sub_keyword:
+            matches = subfilter_links(matches, sub_keyword, match_text=match_text, match_url=match_url)
+
+        # Save final results
+        RUNS[run_id].update({
+            "results": matches,
+            "meta": {
+                "source_url": url,
+                "keyword": keyword,
+                "sub_keyword": sub_keyword,
+            }
+        })
+        RUNS[run_id]["progress"].update({"status": "done"})
+    except Exception as e:
+        RUNS[run_id]["progress"].update({"status": "error", "message": str(e)})
 
 # ---------- Flask routes ----------
 @app.route("/", methods=["GET", "POST"])
@@ -338,51 +380,41 @@ def index():
         flash("Keyword cannot be empty.", "error")
         return redirect(url_for("index"))
 
-    try:
-        # Crawl up to max_pages by following the forum's Next link(s)
-        all_links = []
-        for page_url, html_text, soup in iterate_forum_pages(
-            start_url=url,
-            max_pages=max_pages,
-            referer=referer,
-            cookies_raw=cookies_raw,
-            backend=backend,
-            pause_seconds=pause_seconds,
-        ):
-            all_links.extend(extract_links(html_text, page_url))
-
-        # Filter once over the union of links across all visited pages
-        matches = filter_links(
-            all_links,
-            keyword,
-            match_text,
-            match_url,
-            same_domain,
-            base_url=url,
-        )
-
-        # Second-level filter (optional)
-        if sub_keyword:
-            matches = subfilter_links(
-                matches, sub_keyword, match_text=match_text, match_url=match_url
-            )
-
-    except Exception as e:
-        flash(f"Failed to fetch or parse page: {e}", "error")
-        return redirect(url_for("index"))
-
-    # ---------- Instead of storing in session, store in RUNS ----------
+    # ---------- Instead of running synchronously, start a background thread ----------
     run_id = str(uuid.uuid4())
     RUNS[run_id] = {
-        "results": matches,
+        "results": [],
         "meta": {
             "source_url": url,
             "keyword": keyword,
             "sub_keyword": sub_keyword,
         },
+        "progress": {"status": "queued", "current": 0, "total": 0},
     }
     session["run_id"] = run_id  # small cookie-safe token
 
+    # Start the scan in a background thread
+    t = threading.Thread(
+        target=run_scan_task,
+        kwargs=dict(
+            run_id=run_id,
+            url=url,
+            keyword=keyword,
+            sub_keyword=sub_keyword,
+            match_text=match_text,
+            match_url=match_url,
+            same_domain=same_domain,
+            referer=referer,
+            cookies_raw=cookies_raw,
+            backend=backend,
+            pause_seconds=pause_seconds,
+            max_pages=max_pages,
+        ),
+        daemon=True,
+    )
+    t.start()
+
+    # Immediately redirect to the results page where progress will be displayed
     return redirect(url_for("results", page=1))
 
 @app.route("/export/html")
@@ -405,6 +437,7 @@ def results():
         flash("No results to display. Please run a new scan.", "error")
         return redirect(url_for("index"))
 
+    status = data.get("progress", {}).get("status", "done")
     matches = data.get("results", [])
     meta = data.get("meta", {})
     per_page = 30
@@ -439,7 +472,18 @@ def results():
         per_page=per_page,
         total=total,
         start_index=start,  # for global numbering
+        # NEW:
+        run_id=run_id,
+        status=status,
     )
+
+@app.get("/progress/<run_id>")
+def progress(run_id):
+    data = RUNS.get(run_id)
+    if not data:
+        return jsonify({"status": "missing"}), 404
+    prog = data.get("progress", {"current": 0, "total": 0, "status": "idle"})
+    return jsonify(prog)
 
 if __name__ == "__main__":
     app.run(debug=True)

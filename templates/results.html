@@ -1,6 +1,56 @@
 {% extends 'base.html' %}
 {% block content %}
 <section>
+  {% if status != 'done' %}
+  <div id="progress-wrap" class="secondary" style="padding:12px; margin:12px 0;">
+    <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+      <strong>Scanning…</strong>
+      <span id="progress-label">0%</span>
+    </div>
+    <div style="height:10px; background:#eee; border-radius:6px; overflow:hidden;">
+      <div id="progress-bar" style="height:100%; width:0%; background:#4a90e2;"></div>
+    </div>
+    <div class="muted" id="progress-msg" style="margin-top:6px;"></div>
+  </div>
+  <script>
+    (function(){
+      const bar = document.getElementById('progress-bar');
+      const label = document.getElementById('progress-label');
+      const msg = document.getElementById('progress-msg');
+      const wrap = document.getElementById('progress-wrap');
+      const runId = "{{ run_id }}";
+
+      async function poll(){
+        try {
+          const r = await fetch(`/progress/${runId}`, { cache: 'no-store' });
+          if (!r.ok) throw new Error('Progress fetch failed');
+          const p = await r.json();
+          if (p.total > 0) {
+            const pct = Math.min(100, Math.round((p.current / p.total) * 100));
+            bar.style.width = pct + '%';
+            label.textContent = pct + '%';
+          }
+          if (p.message) msg.textContent = p.message;
+
+          if (p.status === 'done') {
+            // reload to render the final results list
+            location.reload();
+            return;
+          } else if (p.status === 'error') {
+            msg.textContent = 'Scan failed: ' + (p.message || 'Unknown error');
+            label.textContent = 'Error';
+            return;
+          }
+        } catch(e){
+          msg.textContent = 'Waiting for progress…';
+        }
+        setTimeout(poll, 700);
+      }
+      poll();
+    })();
+  </script>
+{% endif %}
+
   <p class="muted">Source: <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer" class="url">{{ source_url }}</a></p>
   <p>
     <strong>Keyword:</strong>
