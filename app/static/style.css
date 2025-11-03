@@ -1,0 +1,28 @@
+/* app/static/style.css */
+
+/* General app styles */
+.muted { color: #667; font-size: .9rem; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.url { word-break: break-all; }
+
+/* Tooltip “?” bubble */
+.help {
+  display: inline-block;
+  margin-left: 6px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 50%;
+  background-color: #e8eef9;
+  color: #4a90e2;
+  font-weight: bold;
+  cursor: help;
+  font-size: 0.85rem;
+  transition: background 0.2s, color 0.2s;
+}
+
+.help:hover {
+  background-color: #4a90e2;
+  color: white;
+}

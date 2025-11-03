@@ -20,17 +20,23 @@
 
   <fieldset>
     <legend>Options</legend>
+
     <label>
       <input type="checkbox" name="match_text" checked>
       Match in link text
+      <span class="help" title="Finds your keyword in the visible text of each link.">?</span>
     </label>
+
     <label>
       <input type="checkbox" name="match_url" checked>
       Match in URL
+      <span class="help" title="Finds your keyword inside the link’s href address (the actual URL).">?</span>
     </label>
+
     <label>
       <input type="checkbox" name="same_domain">
       Same domain only
+      <span class="help" title="Restricts matches to the same website as your starting URL — ignores external links.">?</span>
     </label>
   </fieldset>
 

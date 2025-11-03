@@ -77,8 +77,8 @@
   </details>
 
   <div style="margin: 12px 0; display: flex; gap: 8px;">
-    <a href="\" role="button" class="secondary">New Scan</a>
-    <a href="{{ url_for('export_html') }}" role="button">Export HTML</a>
+    <a href="{{ url_for('main.index') }}" role="button" class="secondary">New Scan</a>
+    <a href="{{ url_for('main.export_html') }}" role="button">Export HTML</a>
   </div>
 
   {% if matches %}
@@ -97,12 +97,12 @@
       {% set first_disabled = (page == 1) %}
       {% set last_disabled  = (page == total_pages) %}
 
-      <a role="button" class="secondary" href="{{ url_for('results', page=1) }}"
+      <a role="button" class="secondary" href="{{ url_for('main.results', page=1) }}"
          {% if first_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
          « First
       </a>
 
-      <a role="button" class="secondary" href="{{ url_for('results', page=page-1) }}"
+      <a role="button" class="secondary" href="{{ url_for('main.results', page=page-1) }}"
          {% if first_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
          ‹ Prev
       </a>
@@ -115,16 +115,16 @@
         {% if p == page %}
           <span role="button" class="secondary" aria-current="page" style="font-weight:700;">{{ p }}</span>
         {% else %}
-          <a role="button" class="secondary" href="{{ url_for('results', page=p) }}">{{ p }}</a>
+          <a role="button" class="secondary" href="{{ url_for('main.results', page=p) }}">{{ p }}</a>
         {% endif %}
       {% endfor %}
 
-      <a role="button" class="secondary" href="{{ url_for('results', page=page+1) }}"
+      <a role="button" class="secondary" href="{{ url_for('main.results', page=page+1) }}"
          {% if last_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
          Next ›
       </a>
 
-      <a role="button" class="secondary" href="{{ url_for('results', page=total_pages) }}"
+      <a role="button" class="secondary" href="{{ url_for('main.results', page=total_pages) }}"
          {% if last_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
          Last »
       </a>
