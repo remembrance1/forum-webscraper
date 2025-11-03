@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ title or "WebScan" }}</title>
+
+  <!-- AdminKit CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='adminkit/css/app.css') }}">
+  
+  <style>
+    .auth-wrapper {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #f8f9fc;
+    }
+    .brand { 
+      font-weight: 700; 
+      letter-spacing: .2px; 
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+
+<body>
+{% if minimal %}
+  <!-- Minimal landing-style wrapper (used by landing.html) -->
+  <div class="auth-wrapper">
+    {{ self.page() }}
+  </div>
+{% else %}
+  <!-- Full AdminKit shell (used by dashboard.html, scraper, etc.) -->
+  <div class="wrapper">
+    <!-- Sidebar -->
+    <nav id="sidebar" class="sidebar js-sidebar">
+      <div class="sidebar-content">
+        <a class="sidebar-brand brand" href="{{ url_for('main.dashboard') }}">WebScan</a>
+        <ul class="sidebar-nav">
+          <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ url_for('main.dashboard') }}">
+              Dashboard
+            </a>
+          </li>
+          <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ url_for('main.history') }}">
+              History
+            </a>
+          </li>
+          <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ url_for('main.scraper') }}">
+              New Scan
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main">
+      <!-- Top Navbar -->
+      <nav class="navbar navbar-expand navbar-light navbar-bg">
+        <a class="navbar-brand brand ms-3" href="{{ url_for('main.dashboard') }}">WebScan</a>
+        <div class="navbar-collapse collapse">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.history') }}">History</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.scraper') }}">New Scan</a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <!-- Page Content -->
+      <main class="content">
+        <div class="container-fluid p-0">
+          {{ self.page() }}
+        </div>
+      </main>
+    </div> <!-- /.main -->
+  </div> <!-- /.wrapper -->
+{% endif %}
+
+<!-- AdminKit JS -->
+<script src="{{ url_for('static', filename='adminkit/js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

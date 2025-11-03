@@ -1,0 +1,14 @@
+{% extends 'sb_base.html' %}
+
+{% block page %}
+<div class="d-sm-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 mb-0">History</h1>
+  <a href="{{ url_for('main.scraper') }}" class="btn btn-sm btn-primary">New Scan</a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <p class="text-muted mb-0">History isn’t wired yet. Come back after we store scans.</p>
+  </div>
+</div>
+{% endblock %}

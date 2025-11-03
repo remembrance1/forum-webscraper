@@ -6,6 +6,7 @@ import io
 import os
 import math
 import time
+from datetime import datetime
 
 from .tasks import run_scan_task, RUNS
 from .parser_utils import render_results_html
@@ -15,8 +16,8 @@ main_bp = Blueprint("main", __name__)
 
 APP_TITLE = "Flask Forum Link Scraper"
 
-@main_bp.route("/", methods=["GET", "POST"])
-def index():
+@main_bp.route("/scraper", methods=["GET", "POST"])
+def scraper():
     if request.method == "GET":
         # Clear any previous run when loading the form
         session.pop("run_id", None)
@@ -54,10 +55,10 @@ def index():
     parsed = urlparse(url)
     if not parsed.scheme or not parsed.netloc:
         flash("Please provide a full URL including https://", "error")
-        return redirect(url_for("main.index"))
+        return redirect(url_for("main.scraper"))
     if not keyword:
         flash("Keyword cannot be empty.", "error")
-        return redirect(url_for("main.index"))
+        return redirect(url_for("main.scraper"))
 
     # ---------- Start a background thread ----------
     run_id = str(uuid.uuid4())
@@ -112,7 +113,7 @@ def export_html():
 
     if not data:
         flash("No results to export yet. Run a scan first.", "error")
-        return redirect(url_for("main.index"))
+        return redirect(url_for("main.scraper"))
 
     html_content = render_results_html(data["matches"], data["source_url"], data["keyword"])
     buf = io.BytesIO(html_content.encode("utf-8"))
@@ -126,7 +127,7 @@ def results():
     data = RUNS.get(run_id) if run_id else None
     if not data:
         flash("No results to display. Please run a new scan.", "error")
-        return redirect(url_for("main.index"))
+        return redirect(url_for("main.scraper"))
 
     status = data.get("progress", {}).get("status", "done")
     matches = data.get("results", [])
@@ -172,3 +173,67 @@ def progress(run_id):
         return jsonify({"status": "missing"}), 404
     prog = data.get("progress", {"current": 0, "total": 0, "status": "idle"})
     return jsonify(prog)
+
+@main_bp.get("/export/csv")
+def export_csv():
+    run_id = session.get("run_id")
+    run = RUNS.get(run_id) if run_id else None
+    if not run:
+        flash("No results to export yet. Run a scan first.", "error")
+        return redirect(url_for("main.scraper"))
+
+    matches = run.get("results", [])
+    import csv, io, time
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["#", "Text", "URL"])
+    for i, (text, url) in enumerate(matches, start=1):
+        w.writerow([i, text or url, url])
+
+    mem = io.BytesIO(buf.getvalue().encode("utf-8-sig"))  # BOM for Excel-friendly UTF-8
+    filename = f"links_{int(time.time())}.csv"
+    return send_file(mem, mimetype="text/csv", as_attachment=True, download_name=filename)
+
+
+@main_bp.get("/export/xlsx")
+def export_xlsx():
+    run_id = session.get("run_id")
+    run = RUNS.get(run_id) if run_id else None
+    if not run:
+        flash("No results to export yet. Run a scan first.", "error")
+        return redirect(url_for("main.scraper"))
+
+    matches = run.get("results", [])
+    import io, time
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Links"
+    ws.append(["#", "Text", "URL"])
+    for i, (text, url) in enumerate(matches, start=1):
+        ws.append([i, text or url, url])
+
+    # Optional: autosize columns
+    for col in ("A", "B", "C"):
+        ws.column_dimensions[col].width = 40 if col != "A" else 6
+
+    mem = io.BytesIO()
+    wb.save(mem)
+    mem.seek(0)
+    filename = f"links_{int(time.time())}.xlsx"
+    return send_file(mem, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                     as_attachment=True, download_name=filename)
+
+@main_bp.get("/")
+def landing():
+    return render_template("landing.html", title="Welcome", current_year=datetime.utcnow().year)
+
+@main_bp.get("/dashboard")
+def dashboard():
+    return render_template("dashboard.html", title="Dashboard")
+
+@main_bp.get("/history")
+def history():
+    # stub page for now
+    return render_template("history.html", title="History", scans=[])

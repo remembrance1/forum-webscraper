@@ -76,9 +76,14 @@
     </ul>
   </details>
 
-  <div style="margin: 12px 0; display: flex; gap: 8px;">
-    <a href="{{ url_for('main.index') }}" role="button" class="secondary">New Scan</a>
-    <a href="{{ url_for('main.export_html') }}" role="button">Export HTML</a>
+  <div style="margin: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; align-items:center;">
+    <a href="{{ url_for('main.scraper') }}" role="button" class="secondary">New Scan</a>
+
+    <div role="group" style="display:inline-flex; gap:8px;">
+      <a href="{{ url_for('main.export_html') }}" role="button" class="contrast">Export HTML</a>
+      <a href="{{ url_for('main.export_csv') }}"  role="button" class="secondary">Export CSV</a>
+      <a href="{{ url_for('main.export_xlsx') }}" role="button">Export Excel</a>
+    </div>
   </div>
 
   {% if matches %}
