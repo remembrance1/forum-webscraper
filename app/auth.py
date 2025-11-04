@@ -11,7 +11,7 @@ auth_bp = Blueprint("auth", __name__)
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
-    return render_template("login.html", title="Sign in")
+    return render_template("login.html", title="Sign in", minimal = True)
 
 @auth_bp.post("/login")
 def login_post():

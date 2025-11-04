@@ -62,10 +62,11 @@
   color: #fff;
 }
 
-/* ===== Main layout spacing ===== */
-.main {
+/* ===== Main layout spacing (only when the admin shell is present) ===== */
+.wrapper .main {
   margin-left: var(--sb-w);
 }
+
 
 /* ===== Top Navbar ===== */
 .navbar {
@@ -118,6 +119,15 @@
   background: #fdecea;
   border-color: #f5c0b8;
   color: #8e2a22;
+}
+
+/* Center the login/register card */
+.auth-wrapper{
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f8f9fc;
+  padding: 2rem;
 }
 
 /* ===== Responsive ===== */
