@@ -1,0 +1,24 @@
+{% extends 'sb_base.html' %}
+{% set minimal = True %}
+
+{% block page %}
+<div class="card shadow-sm" style="max-width:460px;width:100%;">
+  <div class="card-body p-4">
+    <h3 class="mb-3 text-center">Sign in</h3>
+    <form method="post" action="{{ url_for('auth.login_post') }}">
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input class="form-control" type="email" name="email" required autofocus>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Password</label>
+        <input class="form-control" type="password" name="password" required>
+      </div>
+      <button class="btn btn-primary w-100" type="submit">Sign in</button>
+    </form>
+    <p class="text-center text-muted small mt-3 mb-0">
+      No account? <a href="{{ url_for('auth.register') }}">Create one</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

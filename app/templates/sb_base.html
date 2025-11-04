@@ -33,45 +33,41 @@
   <!-- Full AdminKit shell (used by dashboard.html, scraper, etc.) -->
   <div class="wrapper">
     <!-- Sidebar -->
-    <nav id="sidebar" class="sidebar js-sidebar">
-      <div class="sidebar-content">
-        <a class="sidebar-brand brand" href="{{ url_for('main.dashboard') }}">WebScan</a>
-        <ul class="sidebar-nav">
-          <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ url_for('main.dashboard') }}">
-              Dashboard
-            </a>
-          </li>
-          <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ url_for('main.history') }}">
-              History
-            </a>
-          </li>
-          <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ url_for('main.scraper') }}">
-              New Scan
-            </a>
-          </li>
-        </ul>
-      </div>
-    </nav>
+    <ul class="sidebar-nav">
+      <li class="sidebar-item">
+        <a class="sidebar-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+      </li>
+
+      {% if current_user.is_authenticated %}
+        <li class="sidebar-item">
+          <a class="sidebar-link" href="{{ url_for('main.history') }}">History</a>
+        </li>
+        <li class="sidebar-item">
+          <a class="sidebar-link" href="{{ url_for('auth.logout') }}">Sign out</a>
+        </li>
+      {% else %}
+        <li class="sidebar-item">
+          <a class="sidebar-link" href="{{ url_for('auth.login') }}">Sign in</a>
+        </li>
+      {% endif %}
+
+      <li class="sidebar-item">
+        <a class="sidebar-link" href="{{ url_for('main.scraper') }}">New Scan</a>
+      </li>
+    </ul>
 
     <!-- Main Content -->
     <div class="main">
       <!-- Top Navbar -->
-      <nav class="navbar navbar-expand navbar-light navbar-bg">
-        <a class="navbar-brand brand ms-3" href="{{ url_for('main.dashboard') }}">WebScan</a>
-        <div class="navbar-collapse collapse">
-          <ul class="navbar-nav ms-auto">
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.history') }}">History</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.scraper') }}">New Scan</a>
-            </li>
-          </ul>
-        </div>
-      </nav>
+      <ul class="navbar-nav ms-auto">
+        {% if current_user.is_authenticated %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.history') }}">History</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.logout') }}">Sign out</a></li>
+        {% else %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Sign in</a></li>
+        {% endif %}
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('main.scraper') }}">New Scan</a></li>
+      </ul>
 
       <!-- Page Content -->
       <main class="content">
