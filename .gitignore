@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+
+# Virtual env
+venv/
+.env/
+
+# Flask secret key
+.flask_secret_key
+
+# System / IDE files
+.DS_Store
+*.swp
+.vscode/
+.idea/

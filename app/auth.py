@@ -19,7 +19,7 @@ def login_post():
     pw = request.form.get("password") or ""
     user = User.query.filter_by(email=email).first()
     if not user or not check_password_hash(user.pw_hash, pw):
-        flash("Invalid email or password", "error")
+        flash("Invalid email or password.", "error")
         return redirect(url_for("auth.login"))
     login_user(user, remember=True)
     return redirect(url_for("main.dashboard"))
@@ -34,16 +34,29 @@ def register():
 def register_post():
     email = (request.form.get("email") or "").strip().lower()
     pw = request.form.get("password") or ""
-    if not email or not pw:
-        flash("Email and password are required.", "error")
+    pw2 = request.form.get("password2") or ""
+
+    if not email or not pw or not pw2:
+        flash("Email, password, and confirmation are required.", "error")
         return redirect(url_for("auth.register"))
+
+    if pw != pw2:
+        flash("Passwords do not match.", "error")
+        return redirect(url_for("auth.register"))
+
+    if len(pw) < 6:
+        flash("Password must be at least 6 characters.", "error")
+        return redirect(url_for("auth.register"))
+
     if User.query.filter_by(email=email).first():
         flash("Email is already registered.", "error")
         return redirect(url_for("auth.register"))
+
     user = User(email=email, pw_hash=generate_password_hash(pw))
     db.session.add(user)
     db.session.commit()
-    flash("Account created. Please sign in.", "primary")
+
+    flash("Account created successfully. Please sign in.", "success")
     return redirect(url_for("auth.login"))
 
 @auth_bp.get("/logout")

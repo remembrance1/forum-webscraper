@@ -7,6 +7,7 @@ import os
 import math
 import time
 from datetime import datetime
+from flask_login import login_required, current_user
 
 from .tasks import run_scan_task, RUNS
 from .parser_utils import render_results_html
@@ -230,10 +231,20 @@ def landing():
     return render_template("landing.html", title="Welcome", current_year=datetime.utcnow().year)
 
 @main_bp.get("/dashboard")
+@login_required
 def dashboard():
-    return render_template("dashboard.html", title="Dashboard")
+    # placeholders until you add a Scan model
+    stats = {
+        "total_scans": 0,
+        "total_matches": 0,
+        "last_scan": None,
+    }
+    recent_scans = []  # later: query your Scan table filtered by current_user.id
+    return render_template("dashboard.html", title="Dashboard",
+                           stats=stats, recent_scans=recent_scans)
 
 @main_bp.get("/history")
+@login_required
 def history():
     # stub page for now
     return render_template("history.html", title="History", scans=[])

@@ -1,16 +1,118 @@
 {% extends 'sb_base.html' %}
 
 {% block page %}
+
 <div class="d-sm-flex align-items-center justify-content-between mb-3">
   <h1 class="h3 mb-0">Dashboard</h1>
-  <a href="{{ url_for('main.scraper') }}" class="btn btn-sm btn-primary">New Scan</a>
-</div>
-
-<div class="card">
-  <div class="card-header"><h5 class="card-title mb-0">Quick Actions</h5></div>
-  <div class="card-body">
-    <a class="btn btn-outline-primary me-2 mb-2" href="{{ url_for('main.scraper') }}">Open Scraper</a>
-    <a class="btn btn-outline-secondary mb-2" href="{{ url_for('main.history') }}">View History</a>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('main.scraper') }}" class="btn btn-primary">New Scan</a>
+    <a href="{{ url_for('main.history') }}" class="btn btn-outline-secondary">View History</a>
   </div>
 </div>
+
+<div class="row g-3">
+  <!-- Stat cards -->
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="text-muted">Total Scans</div>
+            <div class="h3 mb-0">{{ stats.total_scans or 0 }}</div>
+          </div>
+          <div class="text-primary fs-3">🔎</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="text-muted">Matches Found</div>
+            <div class="h3 mb-0">{{ stats.total_matches or 0 }}</div>
+          </div>
+          <div class="text-primary fs-3">✅</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="text-muted">Last Scan</div>
+            <div class="h3 mb-0">{{ stats.last_scan or '—' }}</div>
+          </div>
+          <div class="text-primary fs-3">⏱️</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="text-muted">Account</div>
+            <div class="h3 mb-0">{{ current_user.email }}</div>
+          </div>
+          <div class="text-primary fs-3">👤</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><h5 class="card-title mb-0">Quick Actions</h5></div>
+      <div class="card-body d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" href="{{ url_for('main.scraper') }}">Open Scraper</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('main.history') }}">View History</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent scans table (placeholder) -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><h5 class="card-title mb-0">Recent Scans</h5></div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th style="width: 30%;">Source URL</th>
+                <th>Keyword</th>
+                <th>Matches</th>
+                <th>Run Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if recent_scans %}
+                {% for s in recent_scans %}
+                <tr>
+                  <td class="text-truncate" style="max-width: 420px;">{{ s.source_url }}</td>
+                  <td>{{ s.keyword }}</td>
+                  <td>{{ s.num_matches }}</td>
+                  <td>{{ s.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="4" class="text-muted text-center py-4">No scans yet.</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

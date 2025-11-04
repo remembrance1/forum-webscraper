@@ -35,7 +35,12 @@
           Extract and filter links from any site. Follow “Next” pages. Export to HTML, CSV, or Excel.
         </p>
         <a class="btn btn-primary btn-xl me-2" href="{{ url_for('main.scraper') }}">Start a Scan</a>
-        <a class="btn btn-light btn-xl" href="{{ url_for('main.dashboard') }}">Open Dashboard</a>
+
+        {% if current_user.is_authenticated %}
+          <a class="btn btn-light btn-xl" href="{{ url_for('main.dashboard') }}">Open Dashboard</a>
+        {% else %}
+          <a class="btn btn-light btn-xl" href="{{ url_for('auth.login') }}">Sign in</a>
+        {% endif %}
       </div>
     </div>
   </div>
