@@ -7,19 +7,8 @@
 
   <!-- AdminKit CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='adminkit/css/app.css') }}">
-  
-  <style>
-    .auth-wrapper {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #f8f9fc;
-    }
-    .brand { 
-      font-weight: 700; 
-      letter-spacing: .2px; 
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+
   {% block head %}{% endblock %}
 </head>
 
@@ -45,41 +34,79 @@
   <!-- Full AdminKit shell (used by dashboard.html, scraper, etc.) -->
   <div class="wrapper">
     <!-- Sidebar -->
-    <ul class="sidebar-nav">
-      <li class="sidebar-item">
-        <a class="sidebar-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
-      </li>
+<!-- Sidebar -->
+<ul class="sidebar-nav sb2-sidebar">
+  <li class="sidebar-brand">
+    <a class="sidebar-brand-link" href="{{ url_for('main.dashboard') }}">
+      <i class="align-middle me-2" data-lucide="layout-dashboard"></i>
+      <span class="brand-text">Dashboard</span>
+    </a>
+  </li>
 
-      {% if current_user.is_authenticated %}
-        <li class="sidebar-item">
-          <a class="sidebar-link" href="{{ url_for('main.history') }}">History</a>
-        </li>
-        <li class="sidebar-item">
-          <a class="sidebar-link" href="{{ url_for('auth.logout') }}">Sign out</a>
-        </li>
-      {% else %}
-        <li class="sidebar-item">
-          <a class="sidebar-link" href="{{ url_for('auth.login') }}">Sign in</a>
-        </li>
-      {% endif %}
+  {% if current_user.is_authenticated %}
+    <li class="sidebar-item">
+      <a class="sidebar-link {% if request.endpoint=='main.dashboard' %}active{% endif %}"
+         href="{{ url_for('main.dashboard') }}">
+        <i class="align-middle me-2" data-lucide="activity"></i>
+        <span class="align-middle">Dashboard</span>
+      </a>
+    </li>
 
-      <li class="sidebar-item">
-        <a class="sidebar-link" href="{{ url_for('main.scraper') }}">New Scan</a>
-      </li>
-    </ul>
+    <li class="sidebar-item">
+      <a class="sidebar-link {% if request.endpoint=='main.history' %}active{% endif %}"
+         href="{{ url_for('main.history') }}">
+        <i class="align-middle me-2" data-lucide="clock"></i>
+        <span class="align-middle">History</span>
+      </a>
+    </li>
+
+    <li class="sidebar-item mt-2">
+      <a class="sidebar-link" href="{{ url_for('auth.logout') }}">
+        <i class="align-middle me-2" data-lucide="log-out"></i>
+        <span class="align-middle">Sign out</span>
+      </a>
+    </li>
+  {% else %}
+    <li class="sidebar-item">
+      <a class="sidebar-link" href="{{ url_for('auth.login') }}">
+        <i class="align-middle me-2" data-lucide="log-in"></i>
+        <span class="align-middle">Sign in</span>
+      </a>
+    </li>
+  {% endif %}
+</ul>
+
 
     <!-- Main Content -->
     <div class="main">
       <!-- Top Navbar -->
-      <ul class="navbar-nav ms-auto">
-        {% if current_user.is_authenticated %}
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.history') }}">History</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.logout') }}">Sign out</a></li>
-        {% else %}
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Sign in</a></li>
-        {% endif %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('main.scraper') }}">New Scan</a></li>
-      </ul>
+      <nav class="navbar navbar-expand navbar-light bg-white border-bottom shadow-sm px-3">
+        <!-- Sidebar toggle (hamburger icon) -->
+        <button class="btn btn-link sidebar-toggle" type="button" id="sidebarToggle" aria-label="Toggle sidebar" style="display:none">
+          <i data-lucide="menu"></i>
+        </button>
+
+        <!-- Right side profile dropdown -->
+        <ul class="navbar-nav ms-auto align-items-center">
+          {% if current_user.is_authenticated %}
+            <li class="nav-item dropdown">
+              <a class="nav-icon dropdown-toggle d-flex align-items-center" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                <img src="https://ui-avatars.com/api/?name={{ current_user.email|urlencode }}&background=ff6f3f&color=fff&bold=true"
+                  alt="Profile" class="rounded-circle" width="36" height="36">
+              </a>
+              <div class="dropdown-menu dropdown-menu-end shadow-sm">
+                <h6 class="dropdown-header">{{ current_user.email }}</h6>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                  <i class="align-middle me-2" data-lucide="log-out"></i> Sign out
+                </a>
+              </div>
+            </li>
+          {% else %}
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Sign in</a></li>
+          {% endif %}
+        </ul>
+      </nav>
 
       <!-- Page Content -->
       <main class="content">
@@ -107,5 +134,21 @@
 <!-- AdminKit JS -->
 <script src="{{ url_for('static', filename='adminkit/js/app.js') }}"></script>
 {% block scripts %}{% endblock %}
+
+<script>
+  (function () {
+    const btn = document.getElementById('sidebarToggle');
+    if (!btn) return;
+
+    btn.addEventListener('click', function () {
+      if (window.matchMedia('(max-width: 992px)').matches) {
+        document.body.classList.toggle('sidebar-open');   // off-canvas on mobile
+      } else {
+        document.body.classList.toggle('sidebar-mini');   // compact on desktop
+      }
+    });
+  })();
+</script>
+
 </body>
 </html>
