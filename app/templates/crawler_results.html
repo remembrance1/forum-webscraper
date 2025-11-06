@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+  {% if status != 'done' %}
+  <div id="progress-wrap" class="secondary" style="padding:12px; margin:12px 0;">
+    <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+      <strong>Crawling…</strong>
+      <span id="progress-label">0%</span>
+    </div>
+    <div style="height:10px; background:#eee; border-radius:6px; overflow:hidden;">
+      <div id="progress-bar" style="height:100%; width:0%; background:#4a90e2;"></div>
+    </div>
+    <div class="muted" id="progress-msg" style="margin-top:6px;"></div>
+  </div>
+  <script>
+    (function(){
+      const bar = document.getElementById('progress-bar');
+      const label = document.getElementById('progress-label');
+      const msg = document.getElementById('progress-msg');
+      const runId = "{{ run_id }}";
+      const progressUrl = "{{ url_for('crawler.progress', crawl_id=run_id) }}";
+
+      async function poll(){
+        try {
+          const r = await fetch(progressUrl, { cache: 'no-store' });
+          if (!r.ok) throw new Error('Progress fetch failed');
+          const p = await r.json();
+          if (p.total > 0) {
+            const pct = Math.min(100, Math.round((p.current / p.total) * 100));
+            bar.style.width = pct + '%';
+            label.textContent = pct + '%';
+          }
+          const meta = [];
+          if (p.visited !== undefined) meta.push(`Visited: ${p.visited}`);
+          if (p.matches !== undefined) meta.push(`Matches: ${p.matches}`);
+          if (meta.length) msg.textContent = meta.join(' · ');
+
+          if (p.status === 'done') { location.reload(); return; }
+          if (p.status === 'error') { msg.textContent = 'Crawl failed.'; label.textContent = 'Error'; return; }
+        } catch(e){
+          msg.textContent = 'Waiting for progress…';
+        }
+        setTimeout(poll, 800);
+      }
+      poll();
+    })();
+  </script>
+  {% endif %}
+
+  <p class="muted">Source: <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer" class="url">{{ source_url }}</a></p>
+  <p><strong>Keyword:</strong> <span class="mono">{{ keyword }}</span></p>
+  <p><strong>Sub-keyword:</strong> <span class="mono">{{ sub_keyword if sub_keyword else 'NA' }}</span></p>
+  <p><strong>Total results:</strong> <span class="mono">{{ total }}</span></p>
+
+  <details>
+    <summary>Crawl options</summary>
+    <ul>
+      {% if match_text is not none %}<li>Match in link text: <strong>{{ 'Yes' if match_text else 'No' }}</strong></li>{% endif %}
+      {% if match_url  is not none %}<li>Match in URL:       <strong>{{ 'Yes' if match_url  else 'No' }}</strong></li>{% endif %}
+      {% if same_domain is not none %}<li>Same domain only:   <strong>{{ 'Yes' if same_domain else 'No' }}</strong></li>{% endif %}
+      <li>Max pages: <strong>{{ max_pages }}</strong></li>
+      <li>Page: <strong>{{ page }}</strong> / <strong>{{ total_pages }}</strong></li>
+    </ul>
+  </details>
+
+  <div style="margin: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; align-items:center;">
+    <a href="{{ url_for('crawler.crawler_form') }}" role="button" class="secondary">New Crawl</a>
+
+    <div role="group" style="display:inline-flex; gap:8px;">
+      <a href="{{ url_for('crawler.export_html') }}" role="button" class="contrast">Export HTML</a>
+      <a href="{{ url_for('crawler.export_csv') }}"  role="button" class="secondary">Export CSV</a>
+      <a href="{{ url_for('crawler.export_xlsx') }}" role="button">Export Excel</a>
+    </div>
+  </div>
+
+  {% if matches %}
+    <ul style="list-style: none; padding-left: 0;">
+      {% for text, u in matches %}
+        <li style="margin-bottom: 10px;">
+          <strong>{{ start_index + loop.index }}.</strong>
+          <a href="{{ u }}" target="_blank" rel="noopener noreferrer">{{ text or u }}</a>
+          <div class="muted url">{{ u }}</div>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <!-- Pager -->
+    <nav aria-label="Results pages" style="margin-top: 14px; display: flex; gap: 6px; flex-wrap: wrap;">
+      {% set first_disabled = (page == 1) %}
+      {% set last_disabled  = (page == total_pages) %}
+
+      <a role="button" class="secondary" href="{{ url_for('crawler.crawler_results', page=1) }}"
+         {% if first_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
+         « First
+      </a>
+
+      <a role="button" class="secondary" href="{{ url_for('crawler.crawler_results', page=page-1) }}"
+         {% if first_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
+         ‹ Prev
+      </a>
+
+      {% set start_p = 1 if (page - 2) < 1 else (page - 2) %}
+      {% set end_p = total_pages if (page + 2) > total_pages else (page + 2) %}
+      {% for p in range(start_p, end_p + 1) %}
+        {% if p == page %}
+          <span role="button" class="secondary" aria-current="page" style="font-weight:700;">{{ p }}</span>
+        {% else %}
+          <a role="button" class="secondary" href="{{ url_for('crawler.crawler_results', page=p) }}">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+
+      <a role="button" class="secondary" href="{{ url_for('crawler.crawler_results', page=page+1) }}"
+         {% if last_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
+         Next ›
+      </a>
+
+      <a role="button" class="secondary" href="{{ url_for('crawler.crawler_results', page=total_pages) }}"
+         {% if last_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
+         Last »
+      </a>
+    </nav>
+  {% else %}
+    <article class="secondary">No matches found yet. The crawler may still be running — the list will refresh when done.</article>
+  {% endif %}
+</section>
+{% endblock %}

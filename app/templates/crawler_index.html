@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="muted" style="margin-top:-6px;">
+</p>
+
+<form method="post" action="{{ url_for('crawler.crawler_start') }}" class="vstack gap-3">
+  <div>
+    <label class="form-label">Start URL</label>
+    <input name="url" class="form-control" placeholder="https://example.com/" required>
+  </div>
+
+  <div>
+    <label class="form-label">Keyword</label>
+    <input name="keyword" class="form-control" placeholder="e.g. singapore" required>
+  </div>
+
+  <div>
+    <label class="form-label">Sub-keyword (optional)</label>
+    <input name="sub_keyword" class="form-control" placeholder="comma = OR, plus = AND (e.g. jewish + israel)">
+    <div class="form-text">Matches in link text and/or URL.</div>
+  </div>
+
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" name="match_text" id="mt" checked>
+    <label class="form-check-label" for="mt">Match in link text</label>
+  </div>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" name="match_url" id="mu" checked>
+    <label class="form-check-label" for="mu">Match in URL</label>
+  </div>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" name="same_domain" id="sd" checked>
+    <label class="form-check-label" for="sd">Stay on same domain</label>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label">Max pages</label>
+      <input name="max_pages" type="number" class="form-control" value="500" min="1" max="5000">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Pause (ms)</label>
+      <input name="pause_ms" type="number" class="form-control" value="300" min="0" step="50">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Backend</label>
+      <select name="backend" class="form-select">
+        {% for key in backends %}
+          <option value="{{ key }}">{{ key }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <button class="btn btn-primary mt-2">Start Crawl</button>
+</form>
+{% endblock %}

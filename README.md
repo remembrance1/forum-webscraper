@@ -95,7 +95,7 @@ Scraper2/
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/flask-forum-link-scraper.git
+git clone https://github.com/remembrance1/forum-webscraper.git
 cd flask-forum-link-scraper
 ```
 
