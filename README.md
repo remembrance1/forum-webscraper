@@ -154,17 +154,3 @@ Passwords are securely hashed, and session management is handled via `Flask-Logi
 - 📊 Interactive charts showing keyword frequency  
 - 🔎 Advanced regex-based search filters
 
----
-
-## 👨‍💻 Author
-
-**Javier Ng**  
-Data and Analytics Professional — Ministry of Business, Innovation & Employment (MBIE), New Zealand  
-> “Shaping Tomorrow, Today: Innovating with AI and Data at the Core.”
-
----
-
-## 📝 License
-
-This project is open-source and free to use for educational or personal projects.  
-See `LICENSE` for details.
