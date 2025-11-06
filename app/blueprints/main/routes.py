@@ -53,9 +53,20 @@ def scraper():
         return redirect(url_for("main.scraper"))
 
     run_id = str(uuid.uuid4())
-    RUNS[run_id] = {"results": [],
-                    "meta": {"source_url": url, "keyword": keyword, "sub_keyword": sub_keyword},
-                    "progress": {"status":"queued","current":0,"total":0}}
+    RUNS[run_id] = {
+        "results": [],
+        "meta": {"source_url": url, "keyword": keyword, "sub_keyword": sub_keyword},
+        "progress": {
+            "status": "queued",
+            "current": 0,
+            "total": max_pages,
+            "pages_scanned": 0,
+            "links_seen": 0,
+            "matches": 0,
+            "eta_seconds": None,
+            "message": "Queued",
+        },
+    }
     session["run_id"] = run_id
 
     t = threading.Thread(target=run_scan_task, kwargs=dict(

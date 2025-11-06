@@ -13,42 +13,64 @@
     <div class="muted" id="progress-msg" style="margin-top:6px;"></div>
   </div>
   <script>
-    (function(){
-      const bar = document.getElementById('progress-bar');
-      const label = document.getElementById('progress-label');
-      const msg = document.getElementById('progress-msg');
-      const wrap = document.getElementById('progress-wrap');
-      const runId = "{{ run_id }}";
+  (function(){
+    const bar = document.getElementById('progress-bar');
+    const label = document.getElementById('progress-label');
+    const msg = document.getElementById('progress-msg');
+    const runId = "{{ run_id }}";
+    const progressUrl = "{{ url_for('main.progress', run_id=run_id) }}";
 
-      async function poll(){
-        try {
-          const r = await fetch(`/progress/${runId}`, { cache: 'no-store' });
-          if (!r.ok) throw new Error('Progress fetch failed');
-          const p = await r.json();
-          if (p.total > 0) {
-            const pct = Math.min(100, Math.round((p.current / p.total) * 100));
-            bar.style.width = pct + '%';
-            label.textContent = pct + '%';
-          }
-          if (p.message) msg.textContent = p.message;
+    function fmtSec(s){
+      if (s == null) return "estimating…";
+      s = Math.max(0, parseInt(s, 10));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return (m ? (m + "m ") : "") + r + "s";
+    }
 
-          if (p.status === 'done') {
-            // reload to render the final results list
-            location.reload();
-            return;
-          } else if (p.status === 'error') {
-            msg.textContent = 'Scan failed: ' + (p.message || 'Unknown error');
-            label.textContent = 'Error';
-            return;
-          }
-        } catch(e){
-          msg.textContent = 'Waiting for progress…';
+    async function poll(){
+      try {
+        const r = await fetch(progressUrl, { cache: 'no-store' });
+        if (!r.ok) throw new Error('progress fetch failed');
+        const p = await r.json();
+
+        // progress bar
+        if (p.total > 0) {
+          const pct = Math.min(100, Math.round((p.current / p.total) * 100));
+          bar.style.width = pct + '%';
+          label.textContent = pct + '%';
         }
-        setTimeout(poll, 700);
+
+        // status line: pages + matches + ETA
+        const parts = [];
+        if (typeof p.pages_scanned === 'number' && typeof p.total === 'number') {
+          parts.push(`Pages: ${p.pages_scanned}/${p.total}`);
+        }
+        if (typeof p.matches === 'number') {
+          parts.push(`Matches: ${p.matches}`);
+        }
+        if ("eta_seconds" in p) {
+          parts.push(`ETA: ${fmtSec(p.eta_seconds)}`);
+        }
+        msg.textContent = parts.join(' · ') || (p.message || '');
+
+        if (p.status === 'done') {
+          // reload to render the final results list
+          location.reload();
+          return;
+        } else if (p.status === 'error') {
+          msg.textContent = 'Scan failed: ' + (p.message || 'Unknown error');
+          label.textContent = 'Error';
+          return;
+        }
+      } catch(e){
+        msg.textContent = 'Waiting for progress…';
       }
-      poll();
-    })();
-  </script>
+      setTimeout(poll, 800);
+    }
+    poll();
+  })();
+</script>
 {% endif %}
 
   <p class="muted">Source: <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer" class="url">{{ source_url }}</a></p>
