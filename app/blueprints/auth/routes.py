@@ -1,19 +1,18 @@
-# app/auth.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+# app/blueprints/auth/routes.py
+from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from .models import User
-from . import db
+from app.models import User
+from app.extensions import db
+from . import bp
 
-auth_bp = Blueprint("auth", __name__)
-
-@auth_bp.get("/login")
+@bp.get("/login")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
-    return render_template("login.html", title="Sign in", minimal = True)
+    return render_template("login.html", title="Sign in", minimal=True)
 
-@auth_bp.post("/login")
+@bp.post("/login")
 def login_post():
     email = (request.form.get("email") or "").strip().lower()
     pw = request.form.get("password") or ""
@@ -24,13 +23,13 @@ def login_post():
     login_user(user, remember=True)
     return redirect(url_for("main.dashboard"))
 
-@auth_bp.get("/register")
+@bp.get("/register")
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
     return render_template("register.html", title="Create account")
 
-@auth_bp.post("/register")
+@bp.post("/register")
 def register_post():
     email = (request.form.get("email") or "").strip().lower()
     pw = request.form.get("password") or ""
@@ -39,15 +38,12 @@ def register_post():
     if not email or not pw or not pw2:
         flash("Email, password, and confirmation are required.", "error")
         return redirect(url_for("auth.register"))
-
     if pw != pw2:
         flash("Passwords do not match.", "error")
         return redirect(url_for("auth.register"))
-
     if len(pw) < 6:
         flash("Password must be at least 6 characters.", "error")
         return redirect(url_for("auth.register"))
-
     if User.query.filter_by(email=email).first():
         flash("Email is already registered.", "error")
         return redirect(url_for("auth.register"))
@@ -59,7 +55,7 @@ def register_post():
     flash("Account created successfully. Please sign in.", "success")
     return redirect(url_for("auth.login"))
 
-@auth_bp.get("/logout")
+@bp.get("/logout")
 @login_required
 def logout():
     logout_user()

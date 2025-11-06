@@ -34,18 +34,44 @@ def filter_links(links, keyword: str, match_in_text: bool = True, match_in_url: 
                 out.append((text, url))
     return out
 
+# parser_utils.py
+import re
+
+import re
+
 def subfilter_links(pairs, sub_kw, match_text=True, match_url=True):
-    """Second-level filter for (text, url) pairs."""
+    """Refine results using sub-keywords.
+    - Comma (,) separates OR terms: any match passes
+    - Plus (+) separates AND terms: all must match
+      e.g. 'jewish, israel' → OR
+           'jewish + israel' → AND
+    """
     if not sub_kw:
         return pairs
-    pat = re.compile(re.escape(sub_kw), re.IGNORECASE)
+
+    # Detect AND vs OR
+    require_all = "+" in sub_kw and "," not in sub_kw
+
+    # Split terms by comma or plus
+    terms = [t.strip().lower() for t in re.split(r"[,+]", sub_kw) if t.strip()]
+    if not terms:
+        return pairs
+
+    def hit(s: str) -> bool:
+        s_l = (s or "").lower()
+        if require_all:
+            return all(term in s_l for term in terms)
+        else:
+            return any(term in s_l for term in terms)
+
     out = []
     for text, url in pairs:
-        t_ok = bool(match_text and text and pat.search(text))
-        u_ok = bool(match_url and url and pat.search(url))
+        t_ok = match_text and hit(text)
+        u_ok = match_url and hit(url)
         if t_ok or u_ok:
             out.append((text, url))
     return out
+
 
 def render_results_html(links, source_url: str, keyword: str) -> str:
     ts = time.strftime("%Y-%m-%d %H:%M:%S")

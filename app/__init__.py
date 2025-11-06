@@ -5,10 +5,7 @@ from flask_login import LoginManager
 from pathlib import Path
 import os
 
-db = SQLAlchemy()
-login_manager = LoginManager()
-login_manager.login_view = "auth.login"  # where to send unauthenticated users
-
+from .extensions import db, login_manager
 
 def create_app():
     app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -36,10 +33,11 @@ def create_app():
         return User.query.get(int(user_id))
 
     # Register blueprints
-    from .routes import main_bp
-    from .auth import auth_bp
+    from .blueprints.main import bp as main_bp
+    from .blueprints.auth import bp as auth_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
+
 
     # First-run: create database tables
     with app.app_context():
