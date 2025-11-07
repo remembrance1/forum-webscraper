@@ -105,6 +105,8 @@ def results():
                 user_id=current_user.id,
                 source_url=(meta.get("source_url") or "")[:2048],
                 keyword=(meta.get("keyword") or "")[:255],
+                subkeyword=meta.get("sub_keyword"),
+                logic=meta.get("logic"),
                 num_matches=len(matches),
                 results_json=dumps(matches)  # optional
             )
