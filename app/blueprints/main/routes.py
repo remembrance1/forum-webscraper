@@ -33,9 +33,9 @@ def scraper():
         backend = "auto"
 
     try:
-        max_pages = int(request.form.get("max_pages") or 1)
+        max_pages = int(request.form.get("max_pages") or 2)
     except ValueError:
-        max_pages = 1
+        max_pages = 2
     max_pages = max(1, max_pages)
 
     try:
