@@ -3,12 +3,16 @@ from flask import render_template, request, redirect, url_for, send_file, flash,
 from urllib.parse import urlparse
 import uuid, threading, io, os, math, time
 from datetime import datetime
-from flask_login import login_required
+from flask_login import login_required, current_user
 
 from .tasks import run_scan_task, RUNS
 from .parser_utils import render_results_html
 from .fetch_utils import BACKENDS
 from . import bp
+
+from app.extensions import db
+from app.models import Scan
+from json import dumps
 
 APP_TITLE = "Flask Forum Link Scraper"
 
@@ -16,6 +20,7 @@ APP_TITLE = "Flask Forum Link Scraper"
 def scraper():
     if request.method == "GET":
         session.pop("run_id", None)
+        session.pop("scan_saved", None)
         return render_template("index.html", title=APP_TITLE, backends=BACKENDS)
 
     session.pop("run_id", None)
@@ -92,6 +97,27 @@ def results():
     meta = data.get("meta", {})
     per_page = 30
     total = len(matches)
+
+    # --- NEW: persist once when done and authenticated ---
+    if status == "done" and current_user.is_authenticated and not session.get("scan_saved"):
+        try:
+            scan = Scan(
+                user_id=current_user.id,
+                source_url=(meta.get("source_url") or "")[:2048],
+                keyword=(meta.get("keyword") or "")[:255],
+                num_matches=len(matches),
+                results_json=dumps(matches)  # optional
+            )
+            db.session.add(scan)
+            db.session.commit()
+            session["scan_saved"] = True
+        except Exception as e:
+            # don't break the page if saving fails
+            flash(f"Saved results partially, but could not store history: {e}", "warning")
+    # --- end NEW ---
+
+    # ... keep your pagination and render as-is
+    per_page = 30
 
     try:
         page = int(request.args.get("page", 1))
@@ -181,13 +207,32 @@ def landing():
 @bp.get("/dashboard")
 @login_required
 def dashboard():
-    stats = {"total_scans": 0, "total_matches": 0, "last_scan": None}
-    return render_template("dashboard.html", title="Dashboard", stats=stats, recent_scans=[])
+    from sqlalchemy import func
+    q = Scan.query.filter_by(user_id=current_user.id)
+    total_scans = q.count()
+    total_matches = db.session.query(func.coalesce(func.sum(Scan.num_matches), 0))\
+                              .filter(Scan.user_id == current_user.id)\
+                              .scalar()
+    last = q.order_by(Scan.created_at.desc()).first()
+
+    stats = {
+        "total_scans": total_scans,
+        "total_matches": int(total_matches or 0),
+        "last_scan": last.created_at.strftime("%Y-%m-%d %H:%M") if last else None,
+    }
+    recent_scans = q.order_by(Scan.created_at.desc()).limit(5).all()
+    return render_template("dashboard.html", title="Dashboard",
+                           stats=stats, recent_scans=recent_scans)
 
 @bp.get("/history")
 @login_required
 def history():
-    return render_template("history.html", title="History", scans=[])
+    scans = (Scan.query
+                  .filter_by(user_id=current_user.id)
+                  .order_by(Scan.created_at.desc())
+                  .limit(200)
+                  .all())
+    return render_template("history.html", title="History", scans=scans)
 
 @bp.get("/progress/<run_id>")
 def progress(run_id):

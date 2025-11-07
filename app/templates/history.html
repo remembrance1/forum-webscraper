@@ -1,5 +1,4 @@
 {% extends 'sb_base.html' %}
-
 {% block page %}
 <div class="d-sm-flex align-items-center justify-content-between mb-3">
   <h1 class="h3 mb-0">History</h1>
@@ -7,8 +6,34 @@
 </div>
 
 <div class="card">
-  <div class="card-body">
-    <p class="text-muted mb-0">History isn’t wired yet. Come back after we store scans.</p>
+  <div class="card-header"><h5 class="card-title mb-0">Past Scans</h5></div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th style="width:30%;">Source URL</th>
+            <th>Keyword</th>
+            <th>Matches</th>
+            <th>Run Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if scans %}
+            {% for s in scans %}
+            <tr>
+              <td class="text-truncate" style="max-width: 420px;">{{ s.source_url }}</td>
+              <td>{{ s.keyword or '—' }}</td>
+              <td>{{ s.num_matches }}</td>
+              <td>{{ s.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="4" class="text-muted text-center py-4">No scans yet.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 {% endblock %}

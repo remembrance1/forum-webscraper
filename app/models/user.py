@@ -8,3 +8,6 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False)
     pw_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# NEW: let users access their scans
+    scans = db.relationship('Scan', backref='user', lazy='dynamic', cascade='all, delete-orphan')
