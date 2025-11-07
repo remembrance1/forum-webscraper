@@ -17,7 +17,6 @@
     const bar = document.getElementById('progress-bar');
     const label = document.getElementById('progress-label');
     const msg = document.getElementById('progress-msg');
-    const runId = "{{ run_id }}";
     const progressUrl = "{{ url_for('main.progress', run_id=run_id) }}";
 
     function fmtSec(s){
@@ -34,14 +33,12 @@
         if (!r.ok) throw new Error('progress fetch failed');
         const p = await r.json();
 
-        // progress bar
         if (p.total > 0) {
           const pct = Math.min(100, Math.round((p.current / p.total) * 100));
           bar.style.width = pct + '%';
           label.textContent = pct + '%';
         }
 
-        // status line: pages + matches + ETA
         const parts = [];
         if (typeof p.pages_scanned === 'number' && typeof p.total === 'number') {
           parts.push(`Pages: ${p.pages_scanned}/${p.total}`);
@@ -55,7 +52,6 @@
         msg.textContent = parts.join(' · ') || (p.message || '');
 
         if (p.status === 'done') {
-          // reload to render the final results list
           location.reload();
           return;
         } else if (p.status === 'error') {
@@ -70,29 +66,21 @@
     }
     poll();
   })();
-</script>
-{% endif %}
+  </script>
+
+  {% else %}
 
   <p class="muted">Source: <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer" class="url">{{ source_url }}</a></p>
-  <p>
-    <strong>Keyword:</strong>
-    <span class="mono">{{ keyword }}</span>
-  </p>
-  <p>
-    <strong>Sub-keyword:</strong>
-    <span class="mono">{{ sub_keyword if sub_keyword else 'NA' }}</span>
-  </p>
-  <p>
-    <strong>Total results:</strong>
-    <span class="mono">{{ total }}</span>
-  </p>
+  <p><strong>Keyword:</strong> <span class="mono">{{ keyword }}</span></p>
+  <p><strong>Sub-keyword:</strong> <span class="mono">{{ sub_keyword if sub_keyword else 'NA' }}</span></p>
+  <p><strong>Total results:</strong> <span class="mono">{{ total }}</span></p>
 
   <details>
     <summary>Scan options</summary>
     <ul>
       {% if match_text is not none %}<li>Match in link text: <strong>{{ 'Yes' if match_text else 'No' }}</strong></li>{% endif %}
-      {% if match_url  is not none %}<li>Match in URL:       <strong>{{ 'Yes' if match_url  else 'No' }}</strong></li>{% endif %}
-      {% if same_domain is not none %}<li>Same domain only:   <strong>{{ 'Yes' if same_domain else 'No' }}</strong></li>{% endif %}
+      {% if match_url  is not none %}<li>Match in URL: <strong>{{ 'Yes' if match_url else 'No' }}</strong></li>{% endif %}
+      {% if same_domain is not none %}<li>Same domain only: <strong>{{ 'Yes' if same_domain else 'No' }}</strong></li>{% endif %}
       <li>Total matches: <strong>{{ total }}</strong></li>
       <li>Page: <strong>{{ page }}</strong> / <strong>{{ total_pages }}</strong></li>
     </ul>
@@ -100,64 +88,83 @@
 
   <div style="margin: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; align-items:center;">
     <a href="{{ url_for('main.scraper') }}" role="button" class="secondary">New Scan</a>
-
     <div role="group" style="display:inline-flex; gap:8px;">
       <a href="{{ url_for('main.export_html') }}" role="button" class="contrast">Export HTML</a>
-      <a href="{{ url_for('main.export_csv') }}"  role="button" class="secondary">Export CSV</a>
+      <a href="{{ url_for('main.export_csv') }}" role="button" class="secondary">Export CSV</a>
       <a href="{{ url_for('main.export_xlsx') }}" role="button">Export Excel</a>
     </div>
   </div>
 
   {% if matches %}
-    <ul style="list-style: none; padding-left: 0;">
-      {% for text, u in matches %}
-        <li style="margin-bottom: 10px;">
-          <strong>{{ start_index + loop.index }}.</strong>
-          <a href="{{ u }}" target="_blank" rel="noopener noreferrer">{{ text or u }}</a>
-          <div class="muted url">{{ u }}</div>
+    {# per_page is passed from the view; fall back to this page’s length if missing #}
+    {% set per_page = per_page|default(matches|length, true) %}
+    {% set start_index = ((page - 1) * per_page) + 1 %}
+
+    <ol class="results" start="{{ start_index }}" style="padding-left: 1.25rem; margin: 0;">
+      {% for r in matches %}
+
+        {# Normalise: accept dicts, tuples, or raw strings #}
+        {% if r is mapping %}
+          {% set href    = r.get('url') %}
+          {% set title   = r.get('title') %}
+          {% set snippet = r.get('snippet') %}
+        {% elif r is sequence %}
+          {% set href    = (r[1] if r|length > 1 else r[0]) %}
+          {% set title   = (r[0] if r|length > 1 else None) %}
+          {% set snippet = (r[2] if r|length > 2 else None) %}
+        {% else %}
+          {% set href    = r %}
+          {% set title   = None %}
+          {% set snippet = None %}
+        {% endif %}
+
+        {# Fallback: if the title looks generic, derive one from the URL slug #}
+        {% set display = title or '' %}
+        {% if ('Breaking News and Analysis' in (display or '')) or (display|length < 6) %}
+          {% set slug = href.split('?')[0].rstrip('/').split('/')[-1] %}
+          {% set display = slug|replace('-', ' ')|replace('_', ' ')|title %}
+        {% endif %}
+
+        <li style="margin: 0 0 .9rem 0;">
+          <a href="{{ href }}" target="_blank" rel="noopener">{{ display or href }}</a>
+          <div class="muted mono" style="font-size:.9em; line-height:1.2; word-break: break-all;">{{ href }}</div>
+          {% if snippet %}
+            <div class="muted" style="font-size:.95em; margin-top:2px;">{{ snippet }}</div>
+          {% endif %}
         </li>
       {% endfor %}
-    </ul>
-
-    <!-- Pager -->
-    <nav aria-label="Results pages" style="margin-top: 14px; display: flex; gap: 6px; flex-wrap: wrap;">
-      {% set first_disabled = (page == 1) %}
-      {% set last_disabled  = (page == total_pages) %}
-
-      <a role="button" class="secondary" href="{{ url_for('main.results', page=1) }}"
-         {% if first_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
-         « First
-      </a>
-
-      <a role="button" class="secondary" href="{{ url_for('main.results', page=page-1) }}"
-         {% if first_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
-         ‹ Prev
-      </a>
-
-      {# Compute the window [start_p, end_p] around the current page #}
-      {% set start_p = 1 if (page - 2) < 1 else (page - 2) %}
-      {% set end_p = total_pages if (page + 2) > total_pages else (page + 2) %}
-
-      {% for p in range(start_p, end_p + 1) %}
-        {% if p == page %}
-          <span role="button" class="secondary" aria-current="page" style="font-weight:700;">{{ p }}</span>
-        {% else %}
-          <a role="button" class="secondary" href="{{ url_for('main.results', page=p) }}">{{ p }}</a>
-        {% endif %}
-      {% endfor %}
-
-      <a role="button" class="secondary" href="{{ url_for('main.results', page=page+1) }}"
-         {% if last_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
-         Next ›
-      </a>
-
-      <a role="button" class="secondary" href="{{ url_for('main.results', page=total_pages) }}"
-         {% if last_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>
-         Last »
-      </a>
-    </nav>
+    </ol>
   {% else %}
     <article class="secondary">No matches found. Try a broader keyword or different page.</article>
+  {% endif %}
+
+
+  <!-- Pager -->
+  <nav aria-label="Results pages" style="margin-top: 14px; display: flex; gap: 6px; flex-wrap: wrap;">
+    {% set first_disabled = (page == 1) %}
+    {% set last_disabled  = (page == total_pages) %}
+
+    <a role="button" class="secondary" href="{{ url_for('main.results', page=1) }}"
+       {% if first_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>« First</a>
+    <a role="button" class="secondary" href="{{ url_for('main.results', page=page-1) }}"
+       {% if first_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>‹ Prev</a>
+
+    {% set start_p = 1 if (page - 2) < 1 else (page - 2) %}
+    {% set end_p = total_pages if (page + 2) > total_pages else (page + 2) %}
+    {% for p in range(start_p, end_p + 1) %}
+      {% if p == page %}
+        <span role="button" class="secondary" aria-current="page" style="font-weight:700;">{{ p }}</span>
+      {% else %}
+        <a role="button" class="secondary" href="{{ url_for('main.results', page=p) }}">{{ p }}</a>
+      {% endif %}
+    {% endfor %}
+
+    <a role="button" class="secondary" href="{{ url_for('main.results', page=page+1) }}"
+       {% if last_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>Next ›</a>
+    <a role="button" class="secondary" href="{{ url_for('main.results', page=total_pages) }}"
+       {% if last_disabled %}aria-disabled="true" tabindex="-1" style="pointer-events:none; opacity:.5;"{% endif %}>Last »</a>
+  </nav>
+
   {% endif %}
 </section>
 {% endblock %}

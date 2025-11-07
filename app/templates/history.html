@@ -24,7 +24,10 @@
           {% if scans %}
             {% for s in scans %}
             <tr>
-              <td class="text-truncate" style="max-width: 420px;">{{ s.source_url }}</td>
+              <td class="position-relative text-truncate" style="max-width:420px;">
+                <a href="{{ url_for('main.scan_detail', scan_id=s.id) }}" class="stretched-link"></a>
+                {{ s.source_url }}
+              </td>
               <td>{{ s.keyword or '—' }}</td>
               <td>{{ s.num_matches }}</td>
               <td>{{ s.subkeyword or '—' }}</td>

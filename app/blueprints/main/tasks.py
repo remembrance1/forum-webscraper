@@ -4,6 +4,60 @@ from .parser_utils import (
     extract_links, filter_links, subfilter_links, iterate_forum_pages
 )
 
+def _page_title_from_soup(soup):
+    try:
+        if soup and getattr(soup, "title", None) and soup.title.string:
+            return soup.title.string.strip()
+    except Exception:
+        pass
+    return None
+
+def _make_snippet(text: str | None, terms: list[str], span: int = 60) -> str | None:
+    if not text:
+        return None
+    t = text.replace("\n", " ")
+    tl = t.lower()
+    for term in terms:
+        if not term:
+            continue
+        i = tl.find(term.lower())
+        if i != -1:
+            start = max(0, i - span)
+            end = min(len(t), i + len(term) + span)
+            return t[start:end].strip()
+    return None
+
+def _to_result_obj(item, page_title: str | None, page_text: str | None, terms: list[str]):
+    """
+    Normalise whatever filter_links/subfilter_links returned into:
+      {"url": ..., "title": ..., "snippet": ...}
+    Supports dicts, 2-tuples/lists like [matched_text, url], or raw url strings.
+    """
+    url = None
+    title = None
+
+    # Mapping (preferred)
+    if isinstance(item, dict):
+        url = item.get("url") or item.get("href") or item.get("link") or item.get("u")
+        title = item.get("title") or item.get("text") or item.get("anchor")
+
+    # Sequence (legacy: [matched_text, url] or [url])
+    elif isinstance(item, (list, tuple)):
+        if len(item) >= 2:
+            title, url = item[0], item[1]
+        elif len(item) == 1:
+            url = item[0]
+
+    # String fallback
+    else:
+        url = str(item)
+
+    if not title:
+        title = page_title  # fall back to page <title> if we have no anchor/match text
+
+    snippet = _make_snippet(page_text, terms)
+    return {"url": url, "title": title, "snippet": snippet}
+
 # In-memory run registry for progress + results
 RUNS = {}  # { run_id: { "results": [...], "meta": {...}, "progress": {...} } }
 
@@ -49,8 +103,15 @@ def run_scan_task(run_id, *, url, keyword, sub_keyword, match_text, match_url,
                 page_matches = subfilter_links(
                     page_matches, sub_keyword, match_text=match_text, match_url=match_url
                 )
+
             if page_matches:
-                matches_accum.extend(page_matches)
+                terms = [t for t in [keyword, sub_keyword] if t]
+                page_title = _page_title_from_soup(soup)
+                result_objs = [
+                    _to_result_obj(m, page_title=page_title, page_text=html_text, terms=terms)
+                    for m in page_matches
+                ]
+                matches_accum.extend(result_objs)
 
             # progress & ETA
             elapsed = max(0.001, time.time() - start_ts)

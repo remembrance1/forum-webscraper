@@ -1,0 +1,110 @@
+{% extends 'sb_base.html' %}
+{% block page %}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 mb-0">Scan Results</h1>
+  <div>
+    <a href="{{ url_for('main.history') }}" class="btn btn-light me-2">Back</a>
+    <a href="{{ scan.source_url }}" target="_blank" class="btn btn-outline-primary">Open Source</a>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md">
+        <div class="text-muted small">Source URL</div>
+        <div class="fw-semibold text-truncate" style="max-width: 640px;">{{ scan.source_url }}</div>
+      </div>
+      <div class="col-md-2">
+        <div class="text-muted small">Keyword</div>
+        <div class="fw-semibold">{{ scan.keyword or '—' }}</div>
+      </div>
+      <div class="col-md-2">
+        <div class="text-muted small">Subkeyword</div>
+        <div class="fw-semibold">
+          {% if scan.subkeyword %}
+            {% if scan.logic %}{{ scan.logic }} {% endif %}{{ scan.subkeyword }}
+          {% else %}—{% endif %}
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="text-muted small">Matches</div>
+        <div class="fw-semibold">{{ scan.num_matches }}</div>
+      </div>
+      <div class="col-md-2">
+        <div class="text-muted small">Run Time</div>
+        <div class="fw-semibold">{{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h5 class="card-title mb-0">Matched Results</h5></div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th style="width:55%;">URL</th>
+            <th>Title / Snippet</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% if items %}
+        {% for r in items %}
+            <tr>
+            {% if r is mapping %}
+                {# New format: {"url": "...", "title": "...", "snippet": "..."} #}
+                <td class="text-truncate" style="max-width:720px;">
+                <a href="{{ r.get('url') }}" target="_blank" rel="noopener">
+                    {{ r.get('url') }}
+                </a>
+                </td>
+                <td class="text-truncate" style="max-width:520px;">
+                {% if r.get('title') %}<div class="fw-semibold">{{ r.get('title') }}</div>{% endif %}
+                {% if r.get('snippet') %}<div class="text-muted small">{{ r.get('snippet') }}</div>{% else %}—{% endif %}
+                </td>
+
+            {% elif r is sequence %}
+                {# Legacy format: ["matched text/title", "https://..."] or ["https://..."] #}
+                <td class="text-truncate" style="max-width:720px;">
+                <a href="{{ r[1] if r|length > 1 else r[0] }}" target="_blank" rel="noopener">
+                    {{ r[1] if r|length > 1 else r[0] }}
+                </a>
+                </td>
+                <td class="text-truncate" style="max-width:520px;">
+                {{ r[0] if r|length > 1 else '—' }}
+                </td>
+
+            {% else %}
+                {# Fallback: plain string URL #}
+                <td class="text-truncate" style="max-width:720px;">
+                <a href="{{ r }}" target="_blank" rel="noopener">{{ r }}</a>
+                </td>
+                <td>—</td>
+            {% endif %}
+            </tr>
+        {% endfor %}
+        {% else %}
+        <tr><td colspan="2" class="text-center text-muted py-4">No saved results.</td></tr>
+        {% endif %}
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if total_pages > 1 %}
+  <div class="card-footer d-flex justify-content-between">
+    <a class="btn btn-light {% if page <= 1 %}disabled{% endif %}"
+       href="{{ url_for('main.scan_detail', scan_id=scan.id, page=page-1) }}">Previous</a>
+    <span class="text-muted small">Page {{ page }} of {{ total_pages }}</span>
+    <a class="btn btn-light {% if page >= total_pages %}disabled{% endif %}"
+       href="{{ url_for('main.scan_detail', scan_id=scan.id, page=page+1) }}">Next</a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

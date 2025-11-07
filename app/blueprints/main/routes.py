@@ -169,11 +169,12 @@ def export_csv():
         return redirect(url_for("main.scraper"))
 
     matches = run.get("results", [])
-    import csv
+    import csv, io
     s = io.StringIO()
     w = csv.writer(s)
     w.writerow(["#", "Text", "URL"])
-    for i, (text, url) in enumerate(matches, start=1):
+    for i, item in enumerate(matches, start=1):
+        text, url = _coerce_item(item)
         w.writerow([i, text or url, url])
 
     mem = io.BytesIO(s.getvalue().encode("utf-8-sig"))
@@ -192,7 +193,8 @@ def export_xlsx():
     wb = Workbook()
     ws = wb.active; ws.title = "Links"
     ws.append(["#", "Text", "URL"])
-    for i, (text, url) in enumerate(run.get("results", []), start=1):
+    for i, item in enumerate(run.get("results", []), start=1):
+        text, url = _coerce_item(item)
         ws.append([i, text or url, url])
     for col in ("A","B","C"):
         ws.column_dimensions[col].width = 40 if col != "A" else 6
@@ -236,6 +238,38 @@ def history():
                   .all())
     return render_template("history.html", title="History", scans=scans)
 
+@bp.get("/history/<int:scan_id>")
+@login_required
+def scan_detail(scan_id):
+    from json import loads
+    scan = (Scan.query
+                 .filter_by(id=scan_id, user_id=current_user.id)
+                 .first_or_404())
+
+    # decode results (your results_json stores a list of links/objects)
+    results = []
+    try:
+        results = loads(scan.results_json or "[]")
+    except Exception:
+        pass
+
+    # simple pagination
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = 30
+    start = (page - 1) * per_page
+    end = start + per_page
+    page_items = results[start:end]
+    total_pages = (len(results) + per_page - 1) // per_page
+
+    return render_template(
+        "scan_detail.html",
+        title="Scan Results",
+        scan=scan,
+        items=page_items,
+        page=page,
+        total_pages=total_pages,
+    )
+
 @bp.get("/progress/<run_id>")
 def progress(run_id):
     data = RUNS.get(run_id)
@@ -243,3 +277,16 @@ def progress(run_id):
         return jsonify({"status": "missing"}), 404
     prog = data.get("progress", {"current": 0, "total": 0, "status": "idle"})
     return jsonify(prog)
+
+def _coerce_item(item):
+    """Return (text, url) from dict|tuple|str."""
+    if isinstance(item, dict):
+        url = item.get("url")
+        text = item.get("title") or item.get("text") or ""
+        return (text or url or ""), (url or "")
+    elif isinstance(item, (list, tuple)):
+        if len(item) >= 2:
+            return (item[0] or "") , (item[1] or "")
+        elif len(item) == 1:
+            return (item[0] or ""), (item[0] or "")
+    return (str(item), str(item))

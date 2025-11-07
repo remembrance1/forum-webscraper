@@ -73,11 +73,19 @@ def subfilter_links(pairs, sub_kw, match_text=True, match_url=True):
     return out
 
 
+# --- in parser_utils.py ---
 def render_results_html(links, source_url: str, keyword: str) -> str:
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
     items = []
-    for text, url in links:
-        label = text if text else url
+    for item in links:
+        if isinstance(item, dict):
+            url = item.get("url") or ""
+            label = item.get("title") or item.get("text") or url
+        elif isinstance(item, (list, tuple)):
+            url = item[1] if len(item) > 1 else (item[0] if item else "")
+            label = item[0] if len(item) > 1 else url
+        else:
+            url = str(item); label = url
         items.append(
             f'<li><a href="{html.escape(url)}" target="_blank" rel="noopener noreferrer">{html.escape(label)}</a>'
             f'<div style="color:#666;font-size:.85rem;">{html.escape(url)}</div></li>'
@@ -88,7 +96,6 @@ def render_results_html(links, source_url: str, keyword: str) -> str:
 <body><h1>Filtered links for “{html.escape(keyword)}”</h1>
 <p>Source: <a href="{html.escape(source_url)}">{html.escape(source_url)}</a><br>Generated: {ts}</p>
 <ul>{''.join(items)}</ul>{empty_msg}</body></html>"""
-
 
 # ---------- Pagination helpers (robust for query-string + Discuz!) ----------
 
