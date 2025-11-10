@@ -316,6 +316,23 @@ def scan_detail(scan_id):
         total_pages=total_pages,
     )
 
+@bp.post("/history/clear")
+@login_required
+def clear_history():
+    """Delete all saved scan rows for the current user."""
+    try:
+        # SQLAlchemy 2.0–style (works on 1.4+ too):
+        from sqlalchemy import delete
+        db.session.execute(
+            delete(Scan).where(Scan.user_id == current_user.id)
+        )
+        db.session.commit()
+        flash("All history deleted.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Could not clear history: {e}", "error")
+    return redirect(url_for("main.history"))
+
 @bp.get("/progress/<run_id>")
 def progress(run_id):
     data = RUNS.get(run_id)

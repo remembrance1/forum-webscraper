@@ -1,8 +1,44 @@
 {% extends 'sb_base.html' %}
 {% block page %}
-<div class="d-sm-flex align-items-center justify-content-between mb-3">
-  <h1 class="h3 mb-0">History</h1>
-  <a href="{{ url_for('main.scraper') }}" class="btn btn-sm btn-primary">New Scan</a>
+<div class="d-flex justify-content-end mb-3 gap-2">
+
+    <!-- New Scan -->
+    <a href="{{ url_for('main.scraper') }}" class="btn btn-primary btn-sm">
+        New Scan
+    </a>
+
+    <!-- Delete History button (opens modal) -->
+    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+        Delete History
+    </button>
+
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        Are you sure you want to delete <strong>your entire scan history</strong>?
+        This action cannot be undone.
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+
+        <form method="post" action="{{ url_for('main.clear_history') }}">
+          <button type="submit" class="btn btn-danger">Yes, delete all</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
 </div>
 
 <div class="card">
