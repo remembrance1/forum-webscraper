@@ -1,0 +1,135 @@
+{% extends "sb_base.html" %}
+
+{% block page %}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="h3 mb-1">Flask Forum Link Scraper</h1>
+    <div class="text-muted">Paste a forum URL, enter a keyword, and get clean, clickable matches.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('main.history') }}" class="btn btn-outline-secondary">View History</a>
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+  </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category in ['error','danger'] else category }} mb-3" role="alert">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Scan Settings</h5>
+  </div>
+  <div class="card-body">
+    <form method="post" class="needs-validation" novalidate>
+      <div class="row g-3">
+        <!-- URL -->
+        <div class="col-12">
+          <label for="url" class="form-label">Forum URL</label>
+          <input type="url" class="form-control" id="url" name="url"
+                 placeholder="https://example.com/forum/thread" required>
+          <div class="invalid-feedback">Please enter a valid forum URL.</div>
+        </div>
+
+        <!-- Keyword + Subkeyword -->
+        <div class="col-md-6">
+          <label for="keyword" class="form-label">Keyword</label>
+          <input type="text" class="form-control" id="keyword" name="keyword"
+                 placeholder="raspberry" required>
+          <div class="invalid-feedback">A keyword is required.</div>
+        </div>
+        <div class="col-md-6">
+          <label for="sub_keyword" class="form-label">
+            Refine within results <span class="text-muted">(optional)</span>
+          </label>
+          <input type="text" class="form-control" id="sub_keyword" name="sub_keyword"
+                 placeholder="e.g. author:jack, tutorial, guide">
+          <div class="form-text">
+            Applied after the main keyword filter. Use ‘,’ for OR and ‘+’ for AND.
+          </div>
+        </div>
+
+        <!-- Crawl controls -->
+        <div class="col-sm-6 col-lg-3">
+          <label for="max_pages" class="form-label">Max pages to crawl</label>
+          <input type="number" class="form-control" id="max_pages" name="max_pages"
+                 value="3" min="1" step="1">
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <label for="pause_ms" class="form-label">Delay between pages (ms)</label>
+          <input type="number" class="form-control" id="pause_ms" name="pause_ms"
+                 value="400" min="0" step="50">
+        </div>
+
+        <!-- Options -->
+        <div class="col-12">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="match_text" name="match_text" checked>
+                <label class="form-check-label" for="match_text">
+                  Match in link text
+                  <i class="align-middle ms-1" data-bs-toggle="tooltip"
+                     title="Finds your keyword in the visible text of each link.">?</i>
+                </label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="match_url" name="match_url" checked>
+                <label class="form-check-label" for="match_url">
+                  Match in URL
+                  <i class="align-middle ms-1" data-bs-toggle="tooltip"
+                     title="Finds your keyword inside the link’s href address (the actual URL).">?</i>
+                </label>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="same_domain" name="same_domain">
+                <label class="form-check-label" for="same_domain">
+                  Same domain only
+                  <i class="align-middle ms-1" data-bs-toggle="tooltip"
+                     title="Restricts matches to the same website as your starting URL — ignores external links.">?</i>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="col-12 mt-2">
+          <button type="submit" class="btn btn-primary btn-lg">Scan</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Bootstrap validation
+  (function () {
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+      form.addEventListener('submit', evt => {
+        if (!form.checkValidity()) { evt.preventDefault(); evt.stopPropagation(); }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  })();
+
+  // Enable tooltips
+  const tipTrigger = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tipTrigger.map(el => new bootstrap.Tooltip(el));
+</script>
+{% endblock %}

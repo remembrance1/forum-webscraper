@@ -35,7 +35,7 @@ def scraper():
     if request.method == "GET":
         session.pop("run_id", None)
         session.pop("scan_saved", None)
-        return render_template("index.html", title=APP_TITLE, backends=BACKENDS)
+        return render_template("sb_scraper.html", title=APP_TITLE, backends=BACKENDS)
 
     session.pop("run_id", None)
     url = (request.form.get("url") or "").strip()
@@ -151,7 +151,7 @@ def results():
     start = (page - 1) * per_page
     end = start + per_page
 
-    return render_template("results.html",
+    return render_template("sb_scraper_results.html",
         title=APP_TITLE,
         source_url=meta.get("source_url"),
         keyword=meta.get("keyword"),

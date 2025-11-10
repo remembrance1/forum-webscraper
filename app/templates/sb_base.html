@@ -94,13 +94,21 @@
                 <img src="https://ui-avatars.com/api/?name={{ current_user.email|urlencode }}&background=ff6f3f&color=fff&bold=true"
                   alt="Profile" class="rounded-circle" width="36" height="36">
               </a>
-              <div class="dropdown-menu dropdown-menu-end shadow-sm">
-                <h6 class="dropdown-header">{{ current_user.email }}</h6>
-                <div class="dropdown-divider"></div>
-                <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
-                  <i class="align-middle me-2" data-lucide="log-out"></i> Sign out
-                </a>
-              </div>
+                <div class="dropdown-menu dropdown-menu-end shadow-sm">
+                  <h6 class="dropdown-header">{{ current_user.email }}</h6>
+
+                  <a class="dropdown-item" href="{{ url_for('main.dashboard') }}">
+                    <i class="align-middle me-2" data-lucide="layout-dashboard"></i>
+                    Dashboard
+                  </a>
+
+                  <div class="dropdown-divider"></div>
+
+                  <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                    <i class="align-middle me-2" data-lucide="log-out"></i>
+                    Sign out
+                  </a>
+                </div>
             </li>
           {% else %}
             <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Sign in</a></li>
