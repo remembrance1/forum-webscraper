@@ -6,7 +6,46 @@ from .tasks import CRAWLS, run_crawl_task
 from app.blueprints.main.fetch_utils import BACKENDS  # for UI select, reuse
 from app.blueprints.main.parser_utils import render_results_html  # reuse your exporter HTML
 
+import re, html
+TAG_RE = re.compile(r"<[^>]+>")
+
 APP_TITLE = "Flask Site Crawler"
+
+def _dedupe_by_url(items):
+    seen = set()
+    out = []
+    for it in items:
+        # Reuse your coercer to robustly extract the URL across dict/tuple/str
+        _, url = _coerce_item(it)
+        if url and url not in seen:
+            seen.add(url)
+            out.append(it)
+    return out
+
+def _coerce_item(item):
+    """Return (text, url) from dict|tuple|str."""
+    if isinstance(item, dict):
+        url = item.get("url") or ""
+        text = item.get("title") or item.get("text") or ""
+        return (_clean(text) or url, url)
+    elif isinstance(item, (list, tuple)):
+        if len(item) >= 2:
+            return (_clean(item[0] or ""), (item[1] or ""))
+        elif len(item) == 1:
+            x = item[0] or ""
+            return (_clean(x), x)
+    x = str(item)
+    return (_clean(x), x)
+
+def _clean(s: str) -> str:
+    if not s:
+        return ""
+    # unescape any &lt;...&gt; etc.
+    s = html.unescape(s)
+    # drop tags
+    s = TAG_RE.sub("", s)
+    # collapse whitespace
+    return " ".join(s.split())
 
 @bp.get("/")
 def crawler_form():
@@ -71,6 +110,7 @@ def crawler_results():
 
     status = data["progress"]["status"]
     matches = data["results"]
+    matches = _dedupe_by_url(matches)
     meta = data["meta"]
 
     per_page = 30
