@@ -14,7 +14,9 @@
 /* ===== Sidebar ===== */
 .sb2-sidebar {
   position: fixed;
-  top: 0; left: 0; bottom: 0;
+  top: 0; 
+  left: 0; 
+  bottom: 0;
   width: var(--sb-w);
   background: var(--ws-sidebar-bg);
   color: var(--ws-on-dark);
@@ -62,11 +64,10 @@
   color: #fff;
 }
 
-/* ===== Main layout spacing (only when the admin shell is present) ===== */
+/* ===== Main layout spacing (only with sidebar visible) ===== */
 .wrapper .main {
   margin-left: var(--sb-w);
 }
-
 
 /* ===== Top Navbar ===== */
 .navbar {
@@ -75,6 +76,7 @@
   border-bottom: 1px solid #e0e0e0;
   box-shadow: 0 1px 3px rgba(0,0,0,.05);
 }
+
 .navbar .nav-link,
 .navbar .nav-icon {
   color: var(--ws-text);
@@ -83,19 +85,23 @@
 .navbar .nav-icon:hover {
   color: var(--ws-accent-dark);
 }
+
 .navbar .dropdown-menu {
   border: 1px solid rgba(0,0,0,.08);
 }
 
 /* ===== Cards & Typography ===== */
 .h3.text-gray-800 { color: #2c2c2c !important; }
+
 .card {
   border: 1px solid rgba(0,0,0,.05);
   box-shadow: 0 4px 10px rgba(0,0,0,.03);
   border-radius: .75rem;
   background: #ffffff;
 }
-.card .card-title, .card h5 {
+
+.card .card-title, 
+.card h5 {
   color: #2f2c2a;
 }
 
@@ -121,8 +127,8 @@
   color: #8e2a22;
 }
 
-/* Center the login/register card */
-.auth-wrapper{
+/* ===== Auth Wrapper ===== */
+.auth-wrapper {
   min-height: 100vh;
   display: grid;
   place-items: center;
@@ -130,10 +136,14 @@
   padding: 2rem;
 }
 
-/* ===== Responsive ===== */
+/* =========================
+   RESPONSIVE BEHAVIOUR
+   ========================= */
+
 @media (max-width: 1400px) {
   :root { --sb-w: 200px; }
 }
+
 @media (max-width: 992px) {
   .sb2-sidebar {
     transform: translateX(-100%);
@@ -142,11 +152,41 @@
   body.sidebar-open .sb2-sidebar {
     transform: translateX(0);
   }
-  .main { margin-left: 0; }
+  .main { margin-left: 0 !important; }
   .navbar .sidebar-toggle { display: inline-flex !important; }
 }
+
 @media (min-width: 992px) {
   body.sidebar-mini .sb2-sidebar { width: var(--sb-w-compact); }
   body.sidebar-mini .main { margin-left: var(--sb-w-compact); }
   body.sidebar-mini .sb2-sidebar .sidebar-link span { display: none; }
+}
+
+/* =========================
+   ✅ FIX: When NOT logged in
+   ========================= */
+
+/* Remove background strip and spacing */
+body.no-sidebar .wrapper {
+  background: #f5f7fb !important;
+}
+
+/* Remove sidebar offset */
+body.no-sidebar .main {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* Make navbar full width */
+body.no-sidebar .navbar {
+  left: 0 !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  background: #ffffff !important;
+}
+
+/* Fully hide sidebar if it appears by accident */
+body.no-sidebar .sb2-sidebar {
+  display: none !important;
 }

@@ -8,12 +8,19 @@
   <!-- AdminKit CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='adminkit/css/app.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+  {# custom.css: 
+     .main.main-full{margin-left:0!important}
+     body.no-sidebar .sidebar{display:none!important}
+  #}
 
   {% block head %}{% endblock %}
 </head>
 
-<body>
+{# Add no-sidebar class when logged out to neutralise sidebar spacing/colour #}
+<body class="{% if not current_user.is_authenticated %}no-sidebar{% endif %}">
+
 {% if minimal %}
+  <!-- Authentication Wrapper (Login/Register) -->
   <div class="auth-wrapper">
     <div style="width:min(520px, 92%);">
       {% with messages = get_flashed_messages(with_categories=true) %}
@@ -30,85 +37,85 @@
       {{ self.page() }}
     </div>
   </div>
+
 {% else %}
-  <!-- Full AdminKit shell (used by dashboard.html, scraper, etc.) -->
+  <!-- FULL APP SHELL -->
   <div class="wrapper">
-    <!-- Sidebar -->
-<!-- Sidebar -->
-<ul class="sidebar-nav sb2-sidebar">
-  <li class="sidebar-brand">
-    <a class="sidebar-brand-link" href="{{ url_for('main.dashboard') }}">
-      <i class="align-middle me-2" data-lucide="layout-dashboard"></i>
-      <span class="brand-text">Dashboard</span>
-    </a>
-  </li>
 
-  {% if current_user.is_authenticated %}
-    <li class="sidebar-item">
-      <a class="sidebar-link {% if request.endpoint=='main.dashboard' %}active{% endif %}"
-         href="{{ url_for('main.dashboard') }}">
-        <i class="align-middle me-2" data-lucide="activity"></i>
-        <span class="align-middle">Dashboard</span>
-      </a>
-    </li>
+    {% if current_user.is_authenticated %}
+    <!-- SIDEBAR (only when logged in) -->
+    <ul class="sidebar-nav sb2-sidebar">
+      <li class="sidebar-brand">
+        <a class="sidebar-brand-link" href="{{ url_for('main.dashboard') }}" style="font-size:1.1rem; font-weight:700; letter-spacing:.5px;">
+          <span style="font-size:1.4rem; font-weight:800; color:white;">WebScan</span>
+        </a>
+      </li>
 
-    <li class="sidebar-item">
-      <a class="sidebar-link {% if request.endpoint=='main.history' %}active{% endif %}"
-         href="{{ url_for('main.history') }}">
-        <i class="align-middle me-2" data-lucide="clock"></i>
-        <span class="align-middle">History</span>
-      </a>
-    </li>
+      <li class="sidebar-item">
+        <a class="sidebar-link {% if request.endpoint=='main.dashboard' %}active{% endif %}"
+           href="{{ url_for('main.dashboard') }}">
+          <i class="align-middle me-2" data-lucide="activity"></i>
+          <span class="align-middle">Dashboard</span>
+        </a>
+      </li>
 
-    <li class="sidebar-item mt-2">
-      <a class="sidebar-link" href="{{ url_for('auth.logout') }}">
-        <i class="align-middle me-2" data-lucide="log-out"></i>
-        <span class="align-middle">Sign out</span>
-      </a>
-    </li>
-  {% else %}
-    <li class="sidebar-item">
-      <a class="sidebar-link" href="{{ url_for('auth.login') }}">
-        <i class="align-middle me-2" data-lucide="log-in"></i>
-        <span class="align-middle">Sign in</span>
-      </a>
-    </li>
-  {% endif %}
-</ul>
+      <li class="sidebar-item">
+        <a class="sidebar-link {% if request.endpoint=='main.history' %}active{% endif %}"
+           href="{{ url_for('main.history') }}">
+          <i class="align-middle me-2" data-lucide="clock"></i>
+          <span class="align-middle">History</span>
+        </a>
+      </li>
 
+      <li class="sidebar-item mt-2">
+        <a class="sidebar-link" href="{{ url_for('auth.logout') }}">
+          <i class="align-middle me-2" data-lucide="log-out"></i>
+          <span class="align-middle">Sign out</span>
+        </a>
+      </li>
+    </ul>
+    {% endif %}
 
-    <!-- Main Content -->
-    <div class="main">
-      <!-- Top Navbar -->
+    <!-- MAIN CONTENT WRAPPER -->
+    <div class="main {% if not current_user.is_authenticated %}main-full{% endif %}">
+
+      <!-- TOP NAVBAR -->
       <nav class="navbar navbar-expand navbar-light bg-white border-bottom shadow-sm px-3">
-        <!-- Sidebar toggle (hamburger icon) -->
-        <button class="btn btn-link sidebar-toggle" type="button" id="sidebarToggle" aria-label="Toggle sidebar" style="display:none">
+
+        {% if not current_user.is_authenticated %}
+        <a href="{{ url_for('main.landing') }}" class="navbar-brand d-flex align-items-center"
+          style="font-weight:800; font-size:1.4rem; color:#ff6f3f; text-decoration:none;">
+          WebScan
+        </a>
+        {% endif %}
+
+        <!-- Hide burger when logged out -->
+        <button class="btn btn-link sidebar-toggle" type="button" id="sidebarToggle" aria-label="Toggle sidebar"
+                {% if not current_user.is_authenticated %}style="display:none"{% endif %}>
           <i data-lucide="menu"></i>
         </button>
 
-        <!-- Right side profile dropdown -->
+        <!-- Right side profile / auth -->
         <ul class="navbar-nav ms-auto align-items-center">
           {% if current_user.is_authenticated %}
             <li class="nav-item dropdown">
               <a class="nav-icon dropdown-toggle d-flex align-items-center" href="#" data-bs-toggle="dropdown" aria-expanded="false">
                 <img src="https://ui-avatars.com/api/?name={{ current_user.email|urlencode }}&background=ff6f3f&color=fff&bold=true"
-                  alt="Profile" class="rounded-circle" width="36" height="36">
+                     alt="Profile" class="rounded-circle" width="36" height="36">
               </a>
-                <div class="dropdown-menu dropdown-menu-end shadow-sm">
-                  <h6 class="dropdown-header">{{ current_user.email }}</h6>
+              <div class="dropdown-menu dropdown-menu-end shadow-sm">
+                <h6 class="dropdown-header">{{ current_user.email }}</h6>
 
-                  <a class="dropdown-item" href="{{ url_for('main.dashboard') }}">
-                    <i class="align-middle me-2" data-lucide="layout-dashboard"></i>
-                    Dashboard
-                  </a>
+                <a class="dropdown-item" href="{{ url_for('main.dashboard') }}">
+                  <i class="align-middle me-2" data-lucide="layout-dashboard"></i> Dashboard
+                </a>
 
-                  <div class="dropdown-divider"></div>
+                <div class="dropdown-divider"></div>
 
-                  <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
-                    <i class="align-middle me-2" data-lucide="log-out"></i>
-                    Sign out
-                  </a>
-                </div>
+                <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                  <i class="align-middle me-2" data-lucide="log-out"></i> Sign out
+                </a>
+              </div>
             </li>
           {% else %}
             <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Sign in</a></li>
@@ -116,7 +123,7 @@
         </ul>
       </nav>
 
-      <!-- Page Content -->
+      <!-- PAGE CONTENT -->
       <main class="content">
         <div class="container-fluid p-0">
 
@@ -132,9 +139,11 @@
               </div>
             {% endif %}
           {% endwith %}
+
           {{ self.page() }}
         </div>
       </main>
+
     </div> <!-- /.main -->
   </div> <!-- /.wrapper -->
 {% endif %}
@@ -146,15 +155,21 @@
 <script>
   (function () {
     const btn = document.getElementById('sidebarToggle');
-    if (!btn) return;
 
-    btn.addEventListener('click', function () {
-      if (window.matchMedia('(max-width: 992px)').matches) {
-        document.body.classList.toggle('sidebar-open');   // off-canvas on mobile
-      } else {
-        document.body.classList.toggle('sidebar-mini');   // compact on desktop
-      }
-    });
+    // If there is no sidebar on the page, ensure body has no sidebar classes (prevents ghost strip).
+    if (!document.querySelector('.sb2-sidebar')) {
+      document.body.classList.remove('sidebar-open', 'sidebar-mini');
+    }
+
+    if (btn) {
+      btn.addEventListener('click', function () {
+        if (window.matchMedia('(max-width: 992px)').matches) {
+          document.body.classList.toggle('sidebar-open');   // off-canvas on mobile
+        } else {
+          document.body.classList.toggle('sidebar-mini');   // compact on desktop
+        }
+      });
+    }
   })();
 </script>
 
