@@ -190,3 +190,14 @@ body.no-sidebar .navbar {
 body.no-sidebar .sb2-sidebar {
   display: none !important;
 }
+
+/* Delete history card*/
+
+#deleteConfirmCard {
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+#deleteConfirmCard .btn {
+    min-width: 120px;
+}

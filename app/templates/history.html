@@ -16,30 +16,40 @@
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
 
-      <div class="modal-header">
-        <h5 class="modal-title">Confirm Delete</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <!-- WHITE CARD -->
+    <div class="modal-content border-0 shadow-sm" style="background:white; margin-bottom: 20px;">
+
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">Confirm Delete</h5>
+        <!-- removed close button -->
       </div>
 
-      <div class="modal-body">
-        Are you sure you want to delete <strong>your entire scan history</strong>?
-        This action cannot be undone.
+      <div class="modal-body pt-2 pb-1">
+        <p class="text-muted mb-0">
+          Are you sure you want to delete <strong>your entire scan history</strong>?  
+          This action cannot be undone.
+        </p>
       </div>
 
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+      <div class="modal-footer border-0 d-flex justify-content-end gap-2 pt-2">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
 
-        <form method="post" action="{{ url_for('main.clear_history') }}">
-          <button type="submit" class="btn btn-danger">Yes, delete all</button>
+        <form method="post" action="{{ url_for('main.clear_history') }}" style="margin:0;">
+          <button type="submit" class="btn btn-danger">
+            Yes, delete all
+          </button>
         </form>
       </div>
 
     </div>
+
   </div>
 </div>
+
 
 <div class="card">
   <div class="card-header"><h5 class="card-title mb-0">Past Scans</h5></div>
