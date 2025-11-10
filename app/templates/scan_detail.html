@@ -48,49 +48,57 @@
         <thead>
           <tr>
             <th style="width:55%;">URL</th>
-            <th>Title / Snippet</th>
+            <th>Title</th>
           </tr>
         </thead>
         <tbody>
         {% if items %}
-        {% for r in items %}
+          {% for r in items %}
             <tr>
-            {% if r is mapping %}
+              {% if r is mapping %}
                 {# New format: {"url": "...", "title": "...", "snippet": "..."} #}
+                {% set href = r.get('url') %}
+                {% set raw_title = r.get('title') or '' %}
+                {% set title = raw_title|striptags|replace('&nbsp;', ' ')|trim %}
+                {% if not title %}
+                  {% set slug = href.split('?')[0].rstrip('/').split('/')[-1] %}
+                  {% set title = slug|replace('-', ' ')|replace('_', ' ')|title %}
+                {% endif %}
                 <td class="text-truncate" style="max-width:720px;">
-                <a href="{{ r.get('url') }}" target="_blank" rel="noopener">
-                    {{ r.get('url') }}
-                </a>
+                  <a href="{{ href }}" target="_blank" rel="noopener">{{ href }}</a>
                 </td>
                 <td class="text-truncate" style="max-width:520px;">
-                {% if r.get('title') %}<div class="fw-semibold">{{ r.get('title') }}</div>{% endif %}
-                {% if r.get('snippet') %}<div class="text-muted small">{{ r.get('snippet') }}</div>{% else %}—{% endif %}
+                  {{ title or '—' }}
                 </td>
 
-            {% elif r is sequence %}
+              {% elif r is sequence %}
                 {# Legacy format: ["matched text/title", "https://..."] or ["https://..."] #}
+                {% set href = (r[1] if r|length > 1 else r[0]) %}
+                {% set raw_title = (r[0] if r|length > 1 else '') %}
+                {% set title = raw_title|striptags|replace('&nbsp;', ' ')|trim %}
+                {% if not title %}
+                  {% set slug = href.split('?')[0].rstrip('/').split('/')[-1] %}
+                  {% set title = slug|replace('-', ' ')|replace('_', ' ')|title %}
+                {% endif %}
                 <td class="text-truncate" style="max-width:720px;">
-                <a href="{{ r[1] if r|length > 1 else r[0] }}" target="_blank" rel="noopener">
-                    {{ r[1] if r|length > 1 else r[0] }}
-                </a>
+                  <a href="{{ href }}" target="_blank" rel="noopener">{{ href }}</a>
                 </td>
                 <td class="text-truncate" style="max-width:520px;">
-                {{ r[0] if r|length > 1 else '—' }}
+                  {{ title or '—' }}
                 </td>
 
-            {% else %}
+              {% else %}
                 {# Fallback: plain string URL #}
                 <td class="text-truncate" style="max-width:720px;">
-                <a href="{{ r }}" target="_blank" rel="noopener">{{ r }}</a>
+                  <a href="{{ r }}" target="_blank" rel="noopener">{{ r }}</a>
                 </td>
                 <td>—</td>
-            {% endif %}
+              {% endif %}
             </tr>
-        {% endfor %}
+          {% endfor %}
         {% else %}
-        <tr><td colspan="2" class="text-center text-muted py-4">No saved results.</td></tr>
+          <tr><td colspan="2" class="text-center text-muted py-4">No saved results.</td></tr>
         {% endif %}
-
         </tbody>
       </table>
     </div>

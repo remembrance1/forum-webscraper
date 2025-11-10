@@ -16,6 +16,20 @@ from json import dumps
 
 APP_TITLE = "Flask Forum Link Scraper"
 
+# top of routes.py imports
+import re, html
+TAG_RE = re.compile(r"<[^>]+>")
+
+def _clean(s: str) -> str:
+    if not s:
+        return ""
+    # unescape any &lt;...&gt; etc.
+    s = html.unescape(s)
+    # drop tags
+    s = TAG_RE.sub("", s)
+    # collapse whitespace
+    return " ".join(s.split())
+
 @bp.route("/scraper", methods=["GET","POST"])
 def scraper():
     if request.method == "GET":
@@ -93,10 +107,16 @@ def results():
         return redirect(url_for("main.scraper"))
 
     status = data.get("progress", {}).get("status", "done")
-    matches = data.get("results", [])
+    # Get results safely (default empty list)
+    matches = data.get("results") or []
+    # Dedupe them
+    matches = _dedupe_by_url(matches)
+    # Persist back so pagination + exports use the deduped version
+    RUNS[run_id]["results"] = matches
+    # Total AFTER dedupe
+    total = len(matches)
     meta = data.get("meta", {})
     per_page = 30
-    total = len(matches)
 
     # --- NEW: persist once when done and authenticated ---
     if status == "done" and current_user.is_authenticated and not session.get("scan_saved"):
@@ -143,22 +163,32 @@ def results():
 
 @bp.get("/export/html")
 def export_html():
-    data = session.get("last_results")
-    if not data:
-        run_id = session.get("run_id")
-        run = RUNS.get(run_id) if run_id else None
-        if run:
-            data = {"matches": run.get("results", []),
-                    "source_url": run.get("meta", {}).get("source_url", ""),
-                    "keyword": run.get("meta", {}).get("keyword", "")}
-    if not data:
-        flash("No results to export yet. Run a scan first.", "error")
-        return redirect(url_for("main.scraper"))
+    # Prefer current run; fall back to session cache if present
+    run_id = session.get("run_id")
+    run = RUNS.get(run_id) if run_id else None
 
-    html_content = render_results_html(data["matches"], data["source_url"], data["keyword"])
+    if run:
+        matches = _dedupe_by_url(run.get("results", []))
+        meta = run.get("meta", {})
+        source_url = meta.get("source_url", "")
+        keyword = meta.get("keyword", "")
+    else:
+        data = session.get("last_results")
+        if not data:
+            flash("No results to export yet. Run a scan first.", "error")
+            return redirect(url_for("main.scraper"))
+        matches = _dedupe_by_url(data.get("matches", []))
+        source_url = data.get("source_url", "")
+        keyword = data.get("keyword", "")
+
+    html_content = render_results_html(matches, source_url, keyword)
     buf = io.BytesIO(html_content.encode("utf-8"))
-    return send_file(buf, mimetype="text/html", as_attachment=True,
-                     download_name=f"filtered_links_{int(time.time())}.html")
+    return send_file(
+        buf,
+        mimetype="text/html",
+        as_attachment=True,
+        download_name=f"links_{int(time.time())}.html",
+    )
 
 @bp.get("/export/csv")
 def export_csv():
@@ -168,18 +198,23 @@ def export_csv():
         flash("No results to export yet. Run a scan first.", "error")
         return redirect(url_for("main.scraper"))
 
-    matches = run.get("results", [])
+    matches = _dedupe_by_url(run.get("results", []))
+
     import csv, io
     s = io.StringIO()
     w = csv.writer(s)
     w.writerow(["#", "Text", "URL"])
     for i, item in enumerate(matches, start=1):
-        text, url = _coerce_item(item)
+        text, url = _coerce_item(item)   # _coerce_item already strips HTML from text
         w.writerow([i, text or url, url])
 
     mem = io.BytesIO(s.getvalue().encode("utf-8-sig"))
-    return send_file(mem, mimetype="text/csv", as_attachment=True,
-                     download_name=f"links_{int(time.time())}.csv")
+    return send_file(
+        mem,
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=f"links_{int(time.time())}.csv",
+    )
 
 @bp.get("/export/xlsx")
 def export_xlsx():
@@ -189,20 +224,31 @@ def export_xlsx():
         flash("No results to export yet. Run a scan first.", "error")
         return redirect(url_for("main.scraper"))
 
+    matches = _dedupe_by_url(run.get("results", []))
+
     from openpyxl import Workbook
     wb = Workbook()
-    ws = wb.active; ws.title = "Links"
+    ws = wb.active
+    ws.title = "Links"
     ws.append(["#", "Text", "URL"])
-    for i, item in enumerate(run.get("results", []), start=1):
-        text, url = _coerce_item(item)
+    for i, item in enumerate(matches, start=1):
+        text, url = _coerce_item(item)   # _coerce_item already strips HTML from text
         ws.append([i, text or url, url])
-    for col in ("A","B","C"):
-        ws.column_dimensions[col].width = 40 if col != "A" else 6
 
-    mem = io.BytesIO(); wb.save(mem); mem.seek(0)
-    return send_file(mem,
+    # simple column widths
+    ws.column_dimensions["A"].width = 6
+    ws.column_dimensions["B"].width = 60
+    ws.column_dimensions["C"].width = 60
+
+    mem = io.BytesIO()
+    wb.save(mem)
+    mem.seek(0)
+    return send_file(
+        mem,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        as_attachment=True, download_name=f"links_{int(time.time())}.xlsx")
+        as_attachment=True,
+        download_name=f"links_{int(time.time())}.xlsx",
+    )
 
 @bp.get("/")
 def landing():
@@ -278,15 +324,28 @@ def progress(run_id):
     prog = data.get("progress", {"current": 0, "total": 0, "status": "idle"})
     return jsonify(prog)
 
+def _dedupe_by_url(items):
+    seen = set()
+    out = []
+    for it in items:
+        # Reuse your coercer to robustly extract the URL across dict/tuple/str
+        _, url = _coerce_item(it)
+        if url and url not in seen:
+            seen.add(url)
+            out.append(it)
+    return out
+
 def _coerce_item(item):
     """Return (text, url) from dict|tuple|str."""
     if isinstance(item, dict):
-        url = item.get("url")
+        url = item.get("url") or ""
         text = item.get("title") or item.get("text") or ""
-        return (text or url or ""), (url or "")
+        return (_clean(text) or url, url)
     elif isinstance(item, (list, tuple)):
         if len(item) >= 2:
-            return (item[0] or "") , (item[1] or "")
+            return (_clean(item[0] or ""), (item[1] or ""))
         elif len(item) == 1:
-            return (item[0] or ""), (item[0] or "")
-    return (str(item), str(item))
+            x = item[0] or ""
+            return (_clean(x), x)
+    x = str(item)
+    return (_clean(x), x)

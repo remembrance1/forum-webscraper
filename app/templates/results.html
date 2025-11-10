@@ -96,7 +96,6 @@
   </div>
 
   {% if matches %}
-    {# per_page is passed from the view; fall back to this page’s length if missing #}
     {% set per_page = per_page|default(matches|length, true) %}
     {% set start_index = ((page - 1) * per_page) + 1 %}
 
@@ -118,28 +117,25 @@
           {% set snippet = None %}
         {% endif %}
 
-        {# Fallback: if the title looks generic, derive one from the URL slug #}
-        {% set display = title or '' %}
+        {# Clean the display text (strip any HTML) #}
+        {% set display = (title or '')|striptags|trim %}
         {% if ('Breaking News and Analysis' in (display or '')) or (display|length < 6) %}
           {% set slug = href.split('?')[0].rstrip('/').split('/')[-1] %}
           {% set display = slug|replace('-', ' ')|replace('_', ' ')|title %}
         {% endif %}
 
         <li style="margin: 0 0 .9rem 0;">
-          <a href="{{ href }}" target="_blank" rel="noopener">{{ display or href }}</a>
-          <div class="muted mono" style="font-size:.9em; line-height:1.2; word-break: break-all;">{{ href }}</div>
-          {% if snippet %}
-            <div class="muted" style="font-size:.95em; margin-top:2px;">{{ snippet }}</div>
-          {% endif %}
+          <a href="{{ href }}" target="_blank" rel="noopener">
+            {{ (display or href)|striptags|trim }}
+          </a>
         </li>
+
       {% endfor %}
     </ol>
   {% else %}
     <article class="secondary">No matches found. Try a broader keyword or different page.</article>
   {% endif %}
 
-
-  <!-- Pager -->
   <nav aria-label="Results pages" style="margin-top: 14px; display: flex; gap: 6px; flex-wrap: wrap;">
     {% set first_disabled = (page == 1) %}
     {% set last_disabled  = (page == total_pages) %}
