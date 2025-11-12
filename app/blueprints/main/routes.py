@@ -258,6 +258,7 @@ def landing():
 @login_required
 def dashboard():
     from sqlalchemy import func
+    # SCRAPER stats (real)
     q = Scan.query.filter_by(user_id=current_user.id)
     total_scans = q.count()
     total_matches = db.session.query(func.coalesce(func.sum(Scan.num_matches), 0))\
@@ -265,14 +266,38 @@ def dashboard():
                               .scalar()
     last = q.order_by(Scan.created_at.desc()).first()
 
-    stats = {
+    stats_scraper = {
         "total_scans": total_scans,
         "total_matches": int(total_matches or 0),
         "last_scan": last.created_at.strftime("%Y-%m-%d %H:%M") if last else None,
     }
     recent_scans = q.order_by(Scan.created_at.desc()).limit(5).all()
-    return render_template("dashboard.html", title="Dashboard",
-                           stats=stats, recent_scans=recent_scans)
+
+    # CRAWLER stats (optional – safe placeholders if model not present)
+    stats_crawler = {"total_crawls": 0, "pages_visited": 0, "last_crawl": None}
+    recent_crawls = []
+    try:
+        from app.models import Crawl  # will fail until you add it
+        q_crawler = Crawl.query.filter_by(user_id=current_user.id)
+        stats_crawler["total_crawls"] = q_crawler.count()
+        stats_crawler["pages_visited"] = int(db.session.query(
+            func.coalesce(func.sum(Crawl.pages_crawled), 0)
+        ).filter(Crawl.user_id == current_user.id).scalar() or 0)
+        last_crawl = q_crawler.order_by(Crawl.created_at.desc()).first()
+        stats_crawler["last_crawl"] = last_crawl.created_at.strftime("%Y-%m-%d %H:%M") if last_crawl else None
+        recent_crawls = q_crawler.order_by(Crawl.created_at.desc()).limit(5).all()
+    except Exception:
+        # no Crawl model yet — keep placeholders
+        pass
+
+    return render_template(
+        "dashboard.html",
+        title="Dashboard",
+        stats_scraper=stats_scraper,
+        stats_crawler=stats_crawler,
+        recent_scans=recent_scans,
+        recent_crawls=recent_crawls,
+    )
 
 @bp.get("/history")
 @login_required
@@ -282,7 +307,19 @@ def history():
                   .order_by(Scan.created_at.desc())
                   .limit(200)
                   .all())
-    return render_template("history.html", title="History", scans=scans)
+    crawls = []
+    try:
+        from app.models import Crawl
+        crawls = (Crawl.query
+                        .filter_by(user_id=current_user.id)
+                        .order_by(Crawl.created_at.desc())
+                        .limit(200)
+                        .all())
+    except Exception:
+        pass
+
+    return render_template("history.html", title="History", scans=scans, crawls=crawls)
+
 
 @bp.get("/history/<int:scan_id>")
 @login_required

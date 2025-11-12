@@ -1,92 +1,156 @@
 {% extends 'sb_base.html' %}
 {% block page %}
+
 <div class="d-flex justify-content-end mb-3 gap-2">
+  <!-- New Scraper -->
+  <a href="{{ url_for('main.scraper') }}" class="btn btn-primary btn-sm">
+    New Scan
+  </a>
 
-    <!-- New Scan -->
-    <a href="{{ url_for('main.scraper') }}" class="btn btn-primary btn-sm">
-        New Scan
-    </a>
+  <!-- New Crawler -->
+  <a href="{{ url_for('crawler.crawler_form') }}" class="btn btn-outline-primary btn-sm">
+    New Crawl
+  </a>
 
-    <!-- Delete History button (opens modal) -->
-    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
-        Delete History
-    </button>
-
+  <!-- Delete History -->
+  <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+    Delete History
+  </button>
 </div>
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-sm">
-
-    <!-- WHITE CARD -->
     <div class="modal-content border-0 shadow-sm" style="background:white; margin-bottom: 20px;">
-
       <div class="modal-header border-0 pb-0">
         <h5 class="modal-title fw-bold">Confirm Delete</h5>
-        <!-- removed close button -->
       </div>
-
       <div class="modal-body pt-2 pb-1">
         <p class="text-muted mb-0">
-          Are you sure you want to delete <strong>your entire scan history</strong>?  
+          Are you sure you want to delete <strong>your entire history</strong>?
           This action cannot be undone.
         </p>
       </div>
-
       <div class="modal-footer border-0 d-flex justify-content-end gap-2 pt-2">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
           Cancel
         </button>
-
         <form method="post" action="{{ url_for('main.clear_history') }}" style="margin:0;">
           <button type="submit" class="btn btn-danger">
             Yes, delete all
           </button>
         </form>
       </div>
-
     </div>
-
   </div>
 </div>
-
 
 <div class="card">
-  <div class="card-header"><h5 class="card-title mb-0">Past Scans</h5></div>
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <h5 class="card-title mb-0">History</h5>
+  </div>
+
   <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover mb-0">
-        <thead>
-          <tr>
-            <th style="width:30%;">Source URL</th>
-            <th>Keyword</th>
-            <th>Matches</th>
-            <th>Subkeyword</th>
-            <th>Logic</th>
-            <th>Run Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if scans %}
-            {% for s in scans %}
-            <tr>
-              <td class="position-relative text-truncate" style="max-width:420px;">
-                <a href="{{ url_for('main.scan_detail', scan_id=s.id) }}" class="stretched-link"></a>
-                {{ s.source_url }}
-              </td>
-              <td>{{ s.keyword or '—' }}</td>
-              <td>{{ s.num_matches }}</td>
-              <td>{{ s.subkeyword or '—' }}</td>
-              <td>{{ s.logic or '—' }}</td>
-              <td>{{ s.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-            </tr>
-            {% endfor %}
-          {% else %}
-            <tr><td colspan="4" class="text-muted text-center py-4">No scans yet.</td></tr>
-          {% endif %}
-        </tbody>
-      </table>
+    <!-- Tabs -->
+    <ul class="nav nav-tabs px-3 pt-3" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if (request.args.get('tab') or 'scraper') == 'scraper' %}active{% endif %}"
+                id="hist-scraper-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#hist-scraper-pane"
+                type="button" role="tab">
+          🔎 Scraper
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if request.args.get('tab') == 'crawler' %}active{% endif %}"
+                id="hist-crawler-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#hist-crawler-pane"
+                type="button" role="tab">
+          🕸️ Crawler
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+
+      <!-- SCRAPER HISTORY -->
+      <div class="tab-pane fade {% if (request.args.get('tab') or 'scraper') == 'scraper' %}show active{% endif %}" id="hist-scraper-pane" role="tabpanel">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th style="width:30%;">Source URL</th>
+                <th>Keyword</th>
+                <th>Matches</th>
+                <th>Subkeyword</th>
+                <th>Logic</th>
+                <th>Run Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if scans %}
+                {% for s in scans %}
+                <tr>
+                  <td class="position-relative text-truncate" style="max-width:420px;">
+                    <a href="{{ url_for('main.scan_detail', scan_id=s.id) }}" class="stretched-link"></a>
+                    {{ s.source_url }}
+                  </td>
+                  <td>{{ s.keyword or '—' }}</td>
+                  <td>{{ s.num_matches }}</td>
+                  <td>{{ s.subkeyword or '—' }}</td>
+                  <td>{{ s.logic or '—' }}</td>
+                  <td>{{ s.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="6" class="text-muted text-center py-4">No scans yet.</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CRAWLER HISTORY -->
+      <div class="tab-pane fade {% if request.args.get('tab') == 'crawler' %}show active{% endif %}" id="hist-crawler-pane" role="tabpanel">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th style="width:30%;">Start URL</th>
+                <th>Pages Crawled</th>
+                <th>Max Depth</th>
+                <th>Errors</th>
+                <th>Duration</th>
+                <th>Run Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if crawls %}
+                {% for c in crawls %}
+                <tr>
+                  <td class="position-relative text-truncate" style="max-width:420px;">
+                    <a href="{{ url_for('crawler.crawl_detail', crawl_id=c.id) }}" class="stretched-link"></a>
+                    {{ c.start_url }}
+                  </td>
+                  <td>{{ c.pages_crawled }}</td>
+                  <td>{{ c.max_depth or '—' }}</td>
+                  <td>{{ c.error_count or 0 }}</td>
+                  <td>{{ c.duration_human or '—' }}</td>
+                  <td>{{ c.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="6" class="text-muted text-center py-4">No crawls yet.</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
+
 {% endblock %}
