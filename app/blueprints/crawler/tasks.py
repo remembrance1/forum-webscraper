@@ -6,6 +6,11 @@ from app.blueprints.main.fetch_utils import smart_fetch
 from app.blueprints.main.parser_utils import extract_links
 from app.blueprints.main.parser_utils import subfilter_links  # your improved comma/plus logic
 
+from app.models import Crawl
+from app.extensions import db
+import json
+import traceback
+
 CRAWLS = {}  # crawl_id -> {"results": [(text,url)...], "progress": {...}, "meta": {...}}
 
 def _normalize_url(base, href):
@@ -128,4 +133,16 @@ def _crawl_worker(crawl_id, start_url, keyword, sub_keyword, match_text, match_u
         prog["message"] = f"{type(e).__name__}: {e}"
         # optionally log it to console for debugging
         traceback.print_exc()
+    
+    finally:
+        # ✅ Update DB record when crawl finishes <- new!!!!!
+        try:
+            crawl = Crawl.query.get(crawl_id)
+            if crawl:
+                crawl.pages_crawled = prog.get("visited", 0)
+                crawl.status = prog.get("status", "done")
+                crawl.results_json = json.dumps(results)
+                db.session.commit()
+        except Exception as db_err:
+            print(f"DB update failed: {db_err}")
 

@@ -119,11 +119,10 @@
             <thead>
               <tr>
                 <th style="width:30%;">Start URL</th>
+                <th>Keyword</th>
+                <th>Sub-keyword</th>
                 <th>Pages Crawled</th>
-                <th>Max Depth</th>
-                <th>Errors</th>
-                <th>Duration</th>
-                <th>Run Time</th>
+                <th>Matches</th>
               </tr>
             </thead>
             <tbody>
@@ -134,10 +133,10 @@
                     <a href="{{ url_for('crawler.crawl_detail', crawl_id=c.id) }}" class="stretched-link"></a>
                     {{ c.start_url }}
                   </td>
-                  <td>{{ c.pages_crawled }}</td>
-                  <td>{{ c.max_depth or '—' }}</td>
-                  <td>{{ c.error_count or 0 }}</td>
-                  <td>{{ c.duration_human or '—' }}</td>
+                  <td>{{ c.keyword or '—' }}</td>
+                  <td>{{ c.sub_keyword or '—' }}</td>
+                  <td>{{ c.pages_crawled or 0 }}</td>
+                  <td>{{ c.total or 0 }}</td>
                   <td>{{ c.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                 </tr>
                 {% endfor %}

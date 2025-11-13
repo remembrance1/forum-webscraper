@@ -6,7 +6,13 @@ from .tasks import CRAWLS, run_crawl_task
 from app.blueprints.main.fetch_utils import BACKENDS  # for UI select, reuse
 from app.blueprints.main.parser_utils import render_results_html  # reuse your exporter HTML
 
+from app.models import Crawl
 import re, html
+from flask_login import login_required, current_user
+from app.extensions import db
+from json import dumps
+import json 
+
 TAG_RE = re.compile(r"<[^>]+>")
 
 APP_TITLE = "Flask Site Crawler"
@@ -55,6 +61,7 @@ def crawler_form():
 @bp.post("/")
 def crawler_start():
     session.pop("crawl_id", None)
+    session.pop("crawler_saved", None)
     url = (request.form.get("url") or "").strip()
     keyword = (request.form.get("keyword") or "").strip()
     sub_keyword = (request.form.get("sub_keyword") or "").strip()
@@ -108,11 +115,47 @@ def crawler_results():
         flash("No crawl in progress. Start a new one.", "error")
         return redirect(url_for("crawler.crawler_form"))
 
-    status = data["progress"]["status"]
-    matches = data["results"]
-    matches = _dedupe_by_url(matches)
-    meta = data["meta"]
+    # progress/status info
+    progress_data = data.get("progress", {}) or {}
+    status = progress_data.get("status", "done")
 
+    # results for display
+    raw_matches = data.get("results") or []
+    matches = _dedupe_by_url(raw_matches)
+
+    meta = data.get("meta", {}) or {}
+
+    # --- persist once when done and authenticated ---
+    if status == "done" and current_user.is_authenticated and not session.get("crawler_saved"):
+        try:
+            crawl = Crawl(
+                user_id=current_user.id,
+                start_url=(meta.get("start_url") or "")[:2048],
+                keyword=(meta.get("keyword") or "")[:255],
+                sub_keyword=meta.get("sub_keyword"),
+                match_text=bool(meta.get("match_text")),
+                match_url=bool(meta.get("match_url")),
+                same_domain=bool(meta.get("same_domain", True)),
+                backend=meta.get("backend") or "auto",
+                pause_seconds=float(meta.get("pause_seconds") or 0.3),
+                max_pages=int(meta.get("max_pages") or 500),
+                pages_crawled=int(
+                    progress_data.get("visited")
+                    or progress_data.get("pages_crawled")
+                    or progress_data.get("page")
+                    or 0
+                ),
+                status=status,
+                results_json=dumps(matches),   # store deduped matches
+            )
+            db.session.add(crawl)
+            db.session.commit()
+            session["crawler_saved"] = True
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Saved crawl partially, but could not store history: {e}", "warning")
+
+    # pagination
     per_page = 30
     total = len(matches)
 
@@ -127,19 +170,25 @@ def crawler_results():
     end = start + per_page
 
     return render_template(
-        "crawler_results.html",        # ← use the new template
+        "crawler_results.html",
         title="Flask Site Crawler",
         source_url=meta.get("start_url"),
         keyword=meta.get("keyword"),
         sub_keyword=meta.get("sub_keyword"),
-        match_text=meta.get("match_text"),        # pass flags for the details panel
+        match_text=meta.get("match_text"),
         match_url=meta.get("match_url"),
         same_domain=meta.get("same_domain"),
         max_pages=meta.get("max_pages"),
         matches=matches[start:end],
-        page=page, total_pages=total_pages, per_page=per_page, total=total,
-        start_index=start, run_id=crawl_id, status=status
+        page=page,
+        total_pages=total_pages,
+        per_page=per_page,
+        total=total,
+        start_index=start,
+        run_id=crawl_id,
+        status=status,
     )
+
 
 @bp.get("/progress/<crawl_id>")
 def progress(crawl_id):
@@ -199,3 +248,49 @@ def export_xlsx():
     return send_file(mem,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         as_attachment=True, download_name=f"crawler_links_{int(time.time())}.xlsx")
+
+@bp.get("/crawl/<int:crawl_id>")
+@login_required
+def crawl_detail(crawl_id):
+    # Only show crawls belonging to the current user
+    crawl = Crawl.query.filter_by(id=crawl_id, user_id=current_user.id).first_or_404()
+
+    # Decode stored results
+    try:
+        raw_matches = json.loads(crawl.results_json) if crawl.results_json else []
+    except Exception:
+        raw_matches = []
+
+    matches = _dedupe_by_url(raw_matches)
+    total = len(matches)
+    per_page = 30
+
+    try:
+        page = int(request.args.get("page", 1))
+    except ValueError:
+        page = 1
+
+    total_pages = max(1, math.ceil(total / per_page))
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * per_page
+    end = start + per_page
+
+    return render_template(
+        "crawler_results.html",
+        title="Flask Site Crawler",
+        source_url=crawl.start_url,
+        keyword=crawl.keyword,
+        sub_keyword=crawl.sub_keyword,
+        match_text=crawl.match_text,
+        match_url=crawl.match_url,
+        same_domain=crawl.same_domain,
+        max_pages=crawl.max_pages,
+        matches=matches[start:end],
+        page=page,
+        total_pages=total_pages,
+        per_page=per_page,
+        total=total,
+        start_index=start,
+        run_id=crawl.id,          # just an identifier for the template
+        status=crawl.status,
+    )
