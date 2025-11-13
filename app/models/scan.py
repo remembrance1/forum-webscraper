@@ -33,6 +33,7 @@ class Crawl(db.Model):
      # For dashboard stats:
     pages_crawled = db.Column(db.Integer, default=0)  # sum for pages visited
     status = db.Column(db.String(50), default="in_progress")  # e.g., completed, failed
+    num_matches = db.Column(db.Integer, default=0) 
     # For storing results:
     results_json = db.Column(db.Text)  # JSON dump of matches if needed
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)

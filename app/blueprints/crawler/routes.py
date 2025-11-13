@@ -124,6 +124,7 @@ def crawler_results():
     matches = _dedupe_by_url(raw_matches)
 
     meta = data.get("meta", {}) or {}
+    total = len(matches)
 
     # --- persist once when done and authenticated ---
     if status == "done" and current_user.is_authenticated and not session.get("crawler_saved"):
@@ -146,6 +147,7 @@ def crawler_results():
                     or 0
                 ),
                 status=status,
+                num_matches = total,
                 results_json=dumps(matches),   # store deduped matches
             )
             db.session.add(crawl)
@@ -157,7 +159,6 @@ def crawler_results():
 
     # pagination
     per_page = 30
-    total = len(matches)
 
     try:
         page = int(request.args.get("page", 1))
