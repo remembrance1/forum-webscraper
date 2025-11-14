@@ -107,10 +107,10 @@
                   <tr>
                     <th style="width: 30%;">Source URL</th>
                     <th>Keyword</th>
+                    <th>Sub-keyword</th>
                     <th>Matches</th>
-                    <th>Subkeyword</th>
                     <th>Logic</th>
-                    <th>Run Time</th>
+                    <th>Created Time</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -119,8 +119,8 @@
                     <tr>
                       <td class="text-truncate" style="max-width: 420px;">{{ s.source_url }}</td>
                       <td>{{ s.keyword or '—' }}</td>
-                      <td>{{ s.num_matches }}</td>
                       <td>{{ s.subkeyword or '—' }}</td>
+                      <td>{{ s.num_matches }}</td>
                       <td>{{ s.logic or '—' }}</td>
                       <td>{{ s.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                     </tr>
@@ -222,11 +222,11 @@
                 <thead>
                   <tr>
                     <th style="width: 30%;">Start URL</th>
+                    <th>Keyword</th>
+                    <th>Sub-keyword</th>
                     <th>Pages Crawled</th>
-                    <th>Max Depth</th>
-                    <th>Errors</th>
-                    <th>Duration</th>
-                    <th>Run Time</th>
+                    <th>Matches</th>
+                    <th>Created Time</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -234,10 +234,10 @@
                     {% for c in recent_crawls %}
                     <tr>
                       <td class="text-truncate" style="max-width: 420px;">{{ c.start_url }}</td>
-                      <td>{{ c.pages_crawled }}</td>
-                      <td>{{ c.max_depth or '—' }}</td>
-                      <td>{{ c.error_count or 0 }}</td>
-                      <td>{{ c.duration_human or '—' }}</td>
+                      <td>{{ c.keyword or '—' }}</td>
+                      <td>{{ c.sub_keyword or '—' }}</td>
+                      <td>{{ c.pages_crawled or 0 }}</td>
+                      <td>{{ c.num_matches or 0 }}</td>
                       <td>{{ c.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                     </tr>
                     {% endfor %}
