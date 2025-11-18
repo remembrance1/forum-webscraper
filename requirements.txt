@@ -1,5 +1,11 @@
 """
-Flask>=3.0
-requests>=2.32
-beautifulsoup4>=4.12
+Flask
+Flask-Login
+Flask-SQLAlchemy
+requests
+beautifulsoup4
+lxml
+openpyxl
+gunicorn
+
 """
