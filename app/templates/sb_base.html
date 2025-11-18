@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>{{ title or "WebScan" }}</title>
+  <title>{{ title or "WebSentry" }}</title>
 
   <!-- AdminKit CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='adminkit/css/app.css') }}">
@@ -47,7 +47,7 @@
     <ul class="sidebar-nav sb2-sidebar">
       <li class="sidebar-brand">
         <a class="sidebar-brand-link" href="{{ url_for('main.dashboard') }}" style="font-size:1.1rem; font-weight:700; letter-spacing:.5px;">
-          <span style="font-size:1.4rem; font-weight:800; color:white;">WebScan</span>
+          <span style="font-size:1.4rem; font-weight:800; color:white;">WebSentry</span>
         </a>
       </li>
 
@@ -85,7 +85,7 @@
         {% if not current_user.is_authenticated %}
         <a href="{{ url_for('main.landing') }}" class="navbar-brand d-flex align-items-center"
           style="font-weight:800; font-size:1.4rem; color:#ff6f3f; text-decoration:none;">
-          WebScan
+          WebSentry
         </a>
         {% endif %}
 
