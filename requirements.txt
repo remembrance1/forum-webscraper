@@ -6,3 +6,7 @@ beautifulsoup4
 lxml
 openpyxl
 gunicorn
+cloudscraper
+playwright
+traceback
+threading
