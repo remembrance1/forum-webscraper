@@ -71,22 +71,23 @@ Scraper2/
 │
 ├── run.py
 └── app/
-    ├── __init__.py            # Flask app factory
-    ├── extensions.py           # db + login_manager initialization
+    ├── __init__.py
+    ├── extensions.py
+    │
     ├── models/
-    │   └── user.py
+    │   ├── __init__.py
+    │   ├── user.py
+    │   ├── scan.py
+    │   └── crawler.py
+    │
     ├── blueprints/
-    │   ├── main/
-    │   │   ├── __init__.py
-    │   │   ├── routes.py      # main scraper routes
-    │   │   ├── parser.py      # link parsing and subfilter logic
-    │   │   ├── fetch.py       # fetch utilities
-    │   │   └── tasks.py       # background scan runner
-    │   └── auth/
-    │       ├── __init__.py
-    │       └── routes.py      # registration, login, logout
-    ├── static/                 # CSS, JS, favicon
-    └── templates/              # HTML templates
+    │   ├── main/        (routes.py, parser_utils.py, fetch_utils.py, tasks.py)
+    │   ├── crawler/     (routes.py, tasks.py)
+    │   └── auth/        (routes.py)
+    │
+    ├── static/          (css/, js/, assets…)
+    └── templates/       (scraper/, crawler/, auth/, base.html)
+
 ```
 
 ---
