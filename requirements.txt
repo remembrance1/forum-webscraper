@@ -8,5 +8,3 @@ openpyxl
 gunicorn
 cloudscraper
 playwright
-traceback
-threading
